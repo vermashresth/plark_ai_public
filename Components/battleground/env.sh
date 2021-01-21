@@ -1,0 +1,1 @@
+export PYTHONPATH="/Users/tlazauskas/git/Turing/plark_ai_public/Components/plark-game/plark_game/:/Users/tlazauskas/git/Turing/plark_ai_public/Components/plark-game/:$PYTHONPATH"
