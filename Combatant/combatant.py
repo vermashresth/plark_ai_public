@@ -133,28 +133,51 @@ def run_combatant(agent_type, agent_path, agent_name, basic_agents_path):
     Load the agent from the agent path, and subscribe to a RabbitMQ queue.
     """
 
+    import time
+
+    print("!"*50, agent_type, 1)
+
     agent = Combatant(agent_path, agent_name, basic_agents_path)
     
+    print("!"*50, agent_type, "1-1")
+
+    agent_queue = "rpc_queue_{}".format(agent_type)
+
+    print("!"*50, agent_type, "1-2")
+
     if "RABBITMQ_HOST" in os.environ.keys():
         hostname = os.environ["RABBITMQ_HOST"]
     else:
         hostname = "localhost"
     
+    print("!"*50, agent_type, 2)
+
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host=hostname)
     )
+    
+    print("!"*50, agent_type, 3)
 
     channel = connection.channel()
 
-    channel.queue_declare(queue="rpc_queue_{}".format(agent_type))
+    print("!"*50, agent_type, 4)
+
+    channel.queue_declare(queue=agent_queue)
+
+    print("!"*50, agent_type, 5)
+
     channel.basic_qos(prefetch_count=1)
+
+    print("!"*50, agent_type, 6)
+
     channel.basic_consume(
-        queue="rpc_queue_{}".format(agent_type), on_message_callback=panther_agent.get_action
+        queue=agent_queue, on_message_callback=agent.get_action
     )
+
+    print("!"*50, agent_type, 7)
 
     print(" [x] {} Awaiting RPC requests".format(agent_type.upper()))
     channel.start_consuming()
-
 
 
 if __name__ == "__main__":
@@ -162,6 +185,10 @@ if __name__ == "__main__":
     """
     
     agent_type = sys.argv[1].lower()
+
+    print("!!!!!!!!"*50)
+    print("!!!!!!!! I AM ", agent_type)
+    print("!!!!!!!!"*50)
 
     if agent_type not in ["pelican","panther"]:
         raise RuntimeError("First argument to combatant.py must be 'pelican' or 'panther'")
