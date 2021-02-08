@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 import pika
@@ -108,3 +109,68 @@ class Combatant:
         )
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
+
+
+AGENTS_PATH = os.path.join(
+        "/plark_ai_public", "data", "agents", "models", "latest"
+    )
+
+BASIC_AGENTS_PATH = os.path.normpath(
+    os.path.join(
+        "/plark_ai_public",
+        "Components",
+        "plark-game",
+        "plark_game",
+        "agents",
+        "basic",
+    )
+)
+
+
+def run_combatant(agent_type, agent_path, agent_name, basic_agents_path):
+    """
+    Run a combatant agent in the tournament environment.
+    Load the agent from the agent path, and subscribe to a RabbitMQ queue.
+    """
+
+    agent = Combatant(agent_path, agent_name, basic_agents_path)
+    
+    if "RABBITMQ_HOST" in os.environ.keys():
+        hostname = os.environ["RABBITMQ_HOST"]
+    else:
+        hostname = "localhost"
+    
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host=hostname)
+    )
+
+    channel = connection.channel()
+
+    channel.queue_declare(queue="rpc_queue_{}".format(agent_type))
+    channel.basic_qos(prefetch_count=1)
+    channel.basic_consume(
+        queue="rpc_queue_{}".format(agent_type), on_message_callback=panther_agent.get_action
+    )
+
+    print(" [x] {} Awaiting RPC requests".format(agent_type.upper()))
+    channel.start_consuming()
+
+
+
+if __name__ == "__main__":
+    """
+    """
+    
+    agent_type = sys.argv[1].lower()
+
+    if agent_type not in ["pelican","panther"]:
+        raise RuntimeError("First argument to combatant.py must be 'pelican' or 'panther'")
+    
+    subdirs = os.listdir(os.path.join(AGENTS_PATH, agent_type))
+    for subdir in subdirs:
+        agent_path = os.path.join(AGENTS_PATH, agent_type, subdir)
+        break
+
+    agent_name = "comb_%s" % (agent_type)
+
+    run_combatant(agent_type, agent_path, agent_name, BASIC_AGENTS_PATH)
