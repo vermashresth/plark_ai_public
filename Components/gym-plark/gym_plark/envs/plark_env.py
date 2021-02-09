@@ -211,6 +211,12 @@ class PlarkEnv(gym.Env):
 		
 		return ob, reward, done, _info
 
+	def set_pelican(self, pelican):
+            self.env.activeGames[len(self.env.activeGames)-1].set_pelican(pelican)
+
+	def set_panther(self, panther):
+            self.env.activeGames[len(self.env.activeGames)-1].set_panther(panther)
+
 	def reset(self):
 		#If a game already exists. reset
 		if len(self.env.activeGames) > 0:

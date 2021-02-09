@@ -9,6 +9,8 @@ from .pelicanAgent import Pelican_Agent
 from .pantherAgent import Panther_Agent
 from .pantherAgent_load_agent import Panther_Agent_Load_Agent
 from .pelicanAgent_load_agent import Pelican_Agent_Load_Agent
+from .pantherAgent_set_agent import Panther_Agent_Set_Agent
+from .pelicanAgent_set_agent import Pelican_Agent_Set_Agent
 from .observation import Observation
 from .explosion import Explosion
 import numpy as np
@@ -88,6 +90,18 @@ class Newgame():
 		self.panther_illegal_move_streak = 0
 
 		self.render(self.render_width,self.render_height,self.gamePlayerTurn)
+
+
+
+	def set_pelican(self, pelican):
+	    kwargs = {}
+	    kwargs['driving_agent'] = 'pelican'
+	    self.pelicanAgent =  Pelican_Agent_Set_Agent(pelican, Observation(self, **kwargs))
+
+	def set_panther(self, panther):
+	    kwargs = {}
+	    kwargs['driving_agent'] = 'panther'
+	    self.pantherAgent =  Panther_Agent_Set_Agent(panther, Observation(self, **kwargs))
 
 	def game_step(self, action):
 		if self.phase == "PELICAN":
