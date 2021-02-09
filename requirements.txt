@@ -5,7 +5,7 @@ opencv-python==4.2.0.32
 requests==2.22.0
 imageio==2.6.1
 gym==0.15.6
-stable-baselines==2.9.0
+#stable-baselines==2.9.0
 imageio-ffmpeg==0.3.0
 ffmpeg==1.4
 pillow==7.1.0
@@ -14,7 +14,7 @@ robotframework==3.1.2
 robotframework-seleniumlibrary==4.3.0
 tensorboardx==2.0
 
-#stable-baselines==2.10.1
+stable-baselines==2.10.1
 tensorflow==1.14
 
 marshmallow==3.10.0
