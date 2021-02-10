@@ -14,7 +14,7 @@ map_width_ub = 35
 map_height_lb = 25
 map_height_ub = 35
 max_turns_lb = 25
-max_turns_ub = 30
+max_turns_ub = 50
 move_limit_panther_lb = 1
 move_limit_panther_ub = 3
 move_limit_pelican_lb = 15
@@ -131,7 +131,7 @@ def check_domain_parameter_ranges_validity():
 #parameter types) "hyperlattice"?
 def recursively_enumerate_params(param_index, param_instance, all_permutations, return_dict):
     if(param_index == len(domain_parameter_ranges)):
-        print(param_instance)
+        #print(param_instance)
         #Either create a list of dictionaries
         if return_dict:
             param_dict = create_param_instance(param_instance)
@@ -171,6 +171,10 @@ def compute_all_permutations(domain_parameter_ranges, return_dict = False):
 #this script
 #One can choose whether to return a dictionary or a numpy array
 def generate_random_param_instance(return_dict = False):
+
+    #Check map width and map height are in the dictionary and in the right place
+    check_domain_parameter_ranges_validity()
+
     rand_instance = np.zeros(len(domain_parameter_ranges), dtype=np.uint8) 
     for i in range(0, len(domain_parameter_ranges)):
         rand_instance[i] = random.choice(list(domain_parameter_ranges.values())[i])
@@ -183,11 +187,58 @@ def generate_random_param_instance(return_dict = False):
     else:
         return rand_instance
 
+#Calculate the number of parameter permutations
+def calculate_num_param_permutations():
+
+    num_params = 1
+    num_params *= len(domain_parameter_ranges["map_width"])
+    num_params *= len(domain_parameter_ranges["map_height"])
+    num_params *= len(domain_parameter_ranges["max_turns"])
+    num_params *= len(domain_parameter_ranges["move_limit_panther"])
+    num_params *= len(domain_parameter_ranges["move_limit_pelican"])
+    num_params *= len(domain_parameter_ranges["default_torpedos"])
+    num_params *= len(domain_parameter_ranges["default_sonobuoys"])
+    num_params *= len(domain_parameter_ranges["turn_limit"])
+    num_params *= len(domain_parameter_ranges["speed"])
+    num_params *= len(domain_parameter_ranges["search_range"])
+    num_params *= len(domain_parameter_ranges["active_range"])
+
+    #For the start column and rows, the range size is variable depending on the width and
+    #height respectively so we can't just multiply by a fixed range size
+    #We have to split it up an multiply accordingly
+    #Ask James for the derived combinatorics equation if you have further questions
+    start_col_products_sum = 0
+    for width in domain_parameter_ranges["map_width"]:
+        start_col_panther_params = compute_range(start_col_panther_lb(width),
+                                                 start_col_panther_ub(width))
+        start_col_pelican_params = compute_range(start_col_pelican_lb(width),
+                                                 start_col_pelican_ub(width))
+        start_col_products_sum += len(start_col_panther_params) * len(start_col_pelican_params)
+
+    num_params *= start_col_products_sum / len(domain_parameter_ranges["map_width"])
+
+    start_row_products_sum = 0
+    for height in domain_parameter_ranges["map_height"]:
+        start_row_panther_params = compute_range(start_row_panther_lb(height),
+                                                 start_row_panther_ub(height))
+        start_row_pelican_params = compute_range(start_row_pelican_lb(height),
+                                                 start_row_pelican_ub(height))
+        start_row_products_sum += len(start_row_panther_params) * len(start_row_pelican_params)
+
+    num_params *= start_row_products_sum / len(domain_parameter_ranges["map_height"])
+
+    return int(num_params)
 
 #Call Examples
 
-#all_permutations = compute_all_permutations(domain_parameter_ranges, True)
-#print(all_permutations)
 
-rand_params = generate_random_param_instance(True)
-print(rand_params)
+#rand_params = generate_random_param_instance(True)
+#print(rand_params)
+
+num_param_perms = calculate_num_param_permutations()
+print("Num params:", num_param_perms)
+print("----------")
+
+#all_permutations = compute_all_permutations(domain_parameter_ranges, True)
+#all_permutations = compute_all_permutations(domain_parameter_ranges, False)
+#print(len(all_permutations))
