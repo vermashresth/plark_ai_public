@@ -1,8 +1,7 @@
-#This script provides two functions: 
-#1. One that generates all permutatations of domain parameters according to lower and upper bounds
-#2. One that generates a random parameter instance according to lower and upper bounds
-#These functions are at the bottom of this script - it would be unwise to call any of the
-#other functions, but because Python is dangerous like that you can do all sorts of crazy stuff
+#This script provides a number of functions for enumerating different types of permutations
+#of domain parameter values accoring to parameter upper and lower bounds
+#This script also provides functionality to randomly generate a number of different types
+#of domain parameter instances
 
 import numpy as np
 import sys
@@ -31,31 +30,6 @@ search_range_lb = 2
 search_range_ub = 4
 active_range_lb = 1
 active_range_ub = 4
-
-'''
-map_width_lb = 25
-map_width_ub = 30 
-map_height_lb = 35
-map_height_ub = 40
-max_turns_lb = 0 
-max_turns_ub = 1
-move_limit_panther_lb = 0
-move_limit_panther_ub = 0
-move_limit_pelican_lb = 0
-move_limit_pelican_ub = 0
-default_torpedos_lb = 0
-default_torpedos_ub = 0
-default_sonobuoys_lb = 0
-default_sonobuoys_ub = 0 
-turn_limit_lb = 0
-turn_limit_ub = 0
-speed_lb = 0
-speed_ub = 0
-search_range_lb = 0
-search_range_ub = 0
-active_range_lb = 0
-active_range_ub = 0
-'''
 
 def start_col_panther_lb(map_width):
     return int(math.floor(0.33 * map_width))
@@ -215,7 +189,7 @@ def compute_all_permutations(domain_parameter_ranges, return_dict = False, endpo
 #this script
 #One can choose whether to return a dictionary or a numpy array
 #If endpoints is set to True, it considers only the endpoints of the parameter ranges
-def generate_random_param_instance(return_dict = False, endpoints = False):
+def generate_random_param_instance(return_dict = True, endpoints = False):
 
     #Check map width and map height are in the dictionary and in the right place
     check_domain_parameter_ranges_validity()
@@ -303,7 +277,8 @@ def calculate_num_param_permutations(endpoints = False):
                                                     start_col_panther_ub(width))
             start_col_pelican_params = compute_range(start_col_pelican_lb(width),
                                                     start_col_pelican_ub(width))
-            start_col_products_sum += len(start_col_panther_params) * len(start_col_pelican_params)
+            start_col_products_sum += len(start_col_panther_params) * \
+                                      len(start_col_pelican_params)
 
         num_params *= start_col_products_sum / len(domain_parameter_ranges["map_width"])
 
@@ -313,23 +288,18 @@ def calculate_num_param_permutations(endpoints = False):
                                                     start_row_panther_ub(height))
             start_row_pelican_params = compute_range(start_row_pelican_lb(height),
                                                     start_row_pelican_ub(height))
-            start_row_products_sum += len(start_row_panther_params) * len(start_row_pelican_params)
+            start_row_products_sum += len(start_row_panther_params) * \
+                                      len(start_row_pelican_params)
 
         num_params *= start_row_products_sum / len(domain_parameter_ranges["map_height"])
 
     return int(num_params)
 
-#Call Examples
+#Call examples
 
-
-rand_params = generate_random_param_instance(return_dict=True, endpoints=True)
-print(rand_params)
+#rand_params = generate_random_param_instance(return_dict=True, endpoints=True)
 
 #num_param_perms = calculate_num_param_permutations(endpoints=True)
-#print("Num params:", num_param_perms)
-#print("----------")
 
 #all_permutations = compute_all_permutations(domain_parameter_ranges, 
 #                                            return_dict=False, endpoints=True)
-#print(all_permutations)
-#print("Permutations length: ", len(all_permutations))
