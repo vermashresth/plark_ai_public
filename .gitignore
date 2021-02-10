@@ -23,7 +23,7 @@ Docker/plark_robot_tests/Results/*
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.swp
 # C extensions
 *.so
 
