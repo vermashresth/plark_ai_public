@@ -32,6 +32,31 @@ search_range_ub = 4
 active_range_lb = 1
 active_range_ub = 4
 
+'''
+map_width_lb = 25
+map_width_ub = 30 
+map_height_lb = 35
+map_height_ub = 40
+max_turns_lb = 0 
+max_turns_ub = 1
+move_limit_panther_lb = 0
+move_limit_panther_ub = 0
+move_limit_pelican_lb = 0
+move_limit_pelican_ub = 0
+default_torpedos_lb = 0
+default_torpedos_ub = 0
+default_sonobuoys_lb = 0
+default_sonobuoys_ub = 0 
+turn_limit_lb = 0
+turn_limit_ub = 0
+speed_lb = 0
+speed_ub = 0
+search_range_lb = 0
+search_range_ub = 0
+active_range_lb = 0
+active_range_ub = 0
+'''
+
 def start_col_panther_lb(map_width):
     return int(math.floor(0.33 * map_width))
 def start_col_panther_ub(map_width):
@@ -127,9 +152,21 @@ def check_domain_parameter_ranges_validity():
         print("map_height needs to be the second item in the dictionary!")
         sys.exit()
 
+#Utility function to calculate whether the number of endpoints is 1 or 2
+def calculate_num_endpoints(param_range):
+    return 2 if len(param_range) > 1 else 1
+
+#Utility function to calculate endpoints
+def calculate_endpoints(param_range):
+    if len(param_range) > 1:
+        return [param_range[0], param_range[-1]]
+    else:
+        return [param_range[0]]
+
 #Recursive function that enumerates over the n-dimensional (where n is the number of domain 
 #parameter types) "hyperlattice"?
-def recursively_enumerate_params(param_index, param_instance, all_permutations, return_dict):
+def recursively_enumerate_params(param_index, param_instance, all_permutations, 
+                                 return_dict, endpoints):
     if(param_index == len(domain_parameter_ranges)):
         #print(param_instance)
         #Either create a list of dictionaries
@@ -141,7 +178,12 @@ def recursively_enumerate_params(param_index, param_instance, all_permutations, 
             all_permutations.append(np.copy(param_instance))
         return all_permutations
     else:
-        for v in list(domain_parameter_ranges.values())[param_index]:
+        if endpoints:
+            #Only get endpoints from parameter range
+            range_values = calculate_endpoints(list(domain_parameter_ranges.values())[param_index])
+        else:
+            range_values = list(domain_parameter_ranges.values())[param_index]
+        for v in range_values:
             param_instance[param_index] = v
             #Compute values for start positions once map width and map height have been decided
             #Hacky as hell but I know the first two dictionary entries are map width and
@@ -149,35 +191,42 @@ def recursively_enumerate_params(param_index, param_instance, all_permutations, 
             if(param_index == 1):
                compute_start_positions(param_instance[0], param_instance[1]) 
             all_permutations = recursively_enumerate_params(param_index+1, param_instance, 
-                                                            all_permutations, return_dict)
+                                                            all_permutations, return_dict,
+                                                            endpoints)
         return all_permutations
         
 #Returns a list of numpy arrays with each numpy array being a particular permutation of the
 #domain parameters
 #OR if you set return_dict to True, it returns a list of dictionaries instead
-def compute_all_permutations(domain_parameter_ranges, return_dict = False):
+#If endpoints is set to True, only the endpoints of the parameter ranges are considered,
+#not the full parameter range
+def compute_all_permutations(domain_parameter_ranges, return_dict = False, endpoints = False):
 
     #Check map width and map height are in the dictionary and in the right place
     check_domain_parameter_ranges_validity()
 
     all_permutations = []
     param_instance = np.zeros(len(domain_parameter_ranges), dtype=np.uint8) 
-    recursively_enumerate_params(0, param_instance, all_permutations, return_dict)
+    recursively_enumerate_params(0, param_instance, all_permutations, return_dict, endpoints)
 
     return all_permutations
-
 
 #Generate random parameter instance according to lower and upper bounds at the top of
 #this script
 #One can choose whether to return a dictionary or a numpy array
-def generate_random_param_instance(return_dict = False):
+#If endpoints is set to True, it considers only the endpoints of the parameter ranges
+def generate_random_param_instance(return_dict = False, endpoints = False):
 
     #Check map width and map height are in the dictionary and in the right place
     check_domain_parameter_ranges_validity()
 
     rand_instance = np.zeros(len(domain_parameter_ranges), dtype=np.uint8) 
     for i in range(0, len(domain_parameter_ranges)):
-        rand_instance[i] = random.choice(list(domain_parameter_ranges.values())[i])
+        if endpoints:
+            rand_instance[i] = \
+                random.choice(calculate_endpoints(list(domain_parameter_ranges.values())[i]))
+        else:
+            rand_instance[i] = random.choice(list(domain_parameter_ranges.values())[i])
         #Calculate starting positions now that map width and map height have been chosen
         if i == 1:
            compute_start_positions(rand_instance[0], rand_instance[1]) 
@@ -188,57 +237,99 @@ def generate_random_param_instance(return_dict = False):
         return rand_instance
 
 #Calculate the number of parameter permutations
-def calculate_num_param_permutations():
+#Only counts endpoints of parameter ranges if endpoints = True
+def calculate_num_param_permutations(endpoints = False):
 
     num_params = 1
-    num_params *= len(domain_parameter_ranges["map_width"])
-    num_params *= len(domain_parameter_ranges["map_height"])
-    num_params *= len(domain_parameter_ranges["max_turns"])
-    num_params *= len(domain_parameter_ranges["move_limit_panther"])
-    num_params *= len(domain_parameter_ranges["move_limit_pelican"])
-    num_params *= len(domain_parameter_ranges["default_torpedos"])
-    num_params *= len(domain_parameter_ranges["default_sonobuoys"])
-    num_params *= len(domain_parameter_ranges["turn_limit"])
-    num_params *= len(domain_parameter_ranges["speed"])
-    num_params *= len(domain_parameter_ranges["search_range"])
-    num_params *= len(domain_parameter_ranges["active_range"])
 
-    #For the start column and rows, the range size is variable depending on the width and
-    #height respectively so we can't just multiply by a fixed range size
-    #We have to split it up an multiply accordingly
-    #Ask James for the derived combinatorics equation if you have further questions
-    start_col_products_sum = 0
-    for width in domain_parameter_ranges["map_width"]:
-        start_col_panther_params = compute_range(start_col_panther_lb(width),
-                                                 start_col_panther_ub(width))
-        start_col_pelican_params = compute_range(start_col_pelican_lb(width),
-                                                 start_col_pelican_ub(width))
-        start_col_products_sum += len(start_col_panther_params) * len(start_col_pelican_params)
+    #If only calculating the number of endpoint permutations
+    if endpoints:
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["map_width"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["map_height"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["max_turns"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["move_limit_panther"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["move_limit_pelican"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["default_torpedos"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["default_sonobuoys"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["turn_limit"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["speed"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["search_range"])
+        num_params *= calculate_num_endpoints(domain_parameter_ranges["active_range"])
 
-    num_params *= start_col_products_sum / len(domain_parameter_ranges["map_width"])
+        start_col_products_sum = 0
+        for width in calculate_endpoints(domain_parameter_ranges["map_width"]):
+            start_col_panther_params = compute_range(start_col_panther_lb(width),
+                                                     start_col_panther_ub(width))
+            start_col_pelican_params = compute_range(start_col_pelican_lb(width),
+                                                     start_col_pelican_ub(width))
+            start_col_products_sum += calculate_num_endpoints(start_col_panther_params) * \
+                                      calculate_num_endpoints(start_col_pelican_params)
 
-    start_row_products_sum = 0
-    for height in domain_parameter_ranges["map_height"]:
-        start_row_panther_params = compute_range(start_row_panther_lb(height),
-                                                 start_row_panther_ub(height))
-        start_row_pelican_params = compute_range(start_row_pelican_lb(height),
-                                                 start_row_pelican_ub(height))
-        start_row_products_sum += len(start_row_panther_params) * len(start_row_pelican_params)
+        num_params *= start_col_products_sum / \
+                      calculate_num_endpoints(domain_parameter_ranges["map_width"])
 
-    num_params *= start_row_products_sum / len(domain_parameter_ranges["map_height"])
+        start_row_products_sum = 0
+        for height in calculate_endpoints(domain_parameter_ranges["map_height"]):
+            start_row_panther_params = compute_range(start_row_panther_lb(height),
+                                                     start_row_panther_ub(height))
+            start_row_pelican_params = compute_range(start_row_pelican_lb(height),
+                                                     start_row_pelican_ub(height))
+            start_row_products_sum += calculate_num_endpoints(start_row_panther_params) * \
+                                      calculate_num_endpoints(start_row_pelican_params)
+
+        num_params *= start_row_products_sum / \
+                      calculate_num_endpoints(domain_parameter_ranges["map_height"])
+
+    else:
+        num_params *= len(domain_parameter_ranges["map_width"])
+        num_params *= len(domain_parameter_ranges["map_height"])
+        num_params *= len(domain_parameter_ranges["max_turns"])
+        num_params *= len(domain_parameter_ranges["move_limit_panther"])
+        num_params *= len(domain_parameter_ranges["move_limit_pelican"])
+        num_params *= len(domain_parameter_ranges["default_torpedos"])
+        num_params *= len(domain_parameter_ranges["default_sonobuoys"])
+        num_params *= len(domain_parameter_ranges["turn_limit"])
+        num_params *= len(domain_parameter_ranges["speed"])
+        num_params *= len(domain_parameter_ranges["search_range"])
+        num_params *= len(domain_parameter_ranges["active_range"])
+
+        #For the start column and rows, the range size is variable depending on the width and
+        #height respectively so we can't just multiply by a fixed range size
+        #We have to split it up an multiply accordingly
+        #Ask James for the derived combinatorics equation if you have further questions
+        start_col_products_sum = 0
+        for width in domain_parameter_ranges["map_width"]:
+            start_col_panther_params = compute_range(start_col_panther_lb(width),
+                                                    start_col_panther_ub(width))
+            start_col_pelican_params = compute_range(start_col_pelican_lb(width),
+                                                    start_col_pelican_ub(width))
+            start_col_products_sum += len(start_col_panther_params) * len(start_col_pelican_params)
+
+        num_params *= start_col_products_sum / len(domain_parameter_ranges["map_width"])
+
+        start_row_products_sum = 0
+        for height in domain_parameter_ranges["map_height"]:
+            start_row_panther_params = compute_range(start_row_panther_lb(height),
+                                                    start_row_panther_ub(height))
+            start_row_pelican_params = compute_range(start_row_pelican_lb(height),
+                                                    start_row_pelican_ub(height))
+            start_row_products_sum += len(start_row_panther_params) * len(start_row_pelican_params)
+
+        num_params *= start_row_products_sum / len(domain_parameter_ranges["map_height"])
 
     return int(num_params)
 
 #Call Examples
 
 
-#rand_params = generate_random_param_instance(True)
-#print(rand_params)
+rand_params = generate_random_param_instance(return_dict=True, endpoints=True)
+print(rand_params)
 
-num_param_perms = calculate_num_param_permutations()
-print("Num params:", num_param_perms)
-print("----------")
+#num_param_perms = calculate_num_param_permutations(endpoints=True)
+#print("Num params:", num_param_perms)
+#print("----------")
 
-#all_permutations = compute_all_permutations(domain_parameter_ranges, True)
-#all_permutations = compute_all_permutations(domain_parameter_ranges, False)
-#print(len(all_permutations))
+#all_permutations = compute_all_permutations(domain_parameter_ranges, 
+#                                            return_dict=False, endpoints=True)
+#print(all_permutations)
+#print("Permutations length: ", len(all_permutations))
