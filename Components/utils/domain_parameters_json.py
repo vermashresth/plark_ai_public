@@ -1,4 +1,15 @@
 import json
+import math
+
+def compute_torpedo_speeds(turn_limit, init_speed):
+
+    #The speed at turn n+1 is equal to half the speed at turn n rounded up to the nearest
+    #whole number
+    torp_speeds = [init_speed]
+    for i in range(1, turn_limit):
+        torp_speeds.append(math.ceil(torp_speeds[-1]/2))
+    
+    return torp_speeds
 
 #Integrate random param instance into a readable game config json
 def create_game_config_json(param_instance):
@@ -26,6 +37,8 @@ def create_game_config_json(param_instance):
             },
             "pelican" : {
                 "move_limit" : param_instance["move_limit_pelican"].item(),
+                "start_col" : param_instance["start_col_pelican"].item(),
+                "start_row" : param_instance["start_row_pelican"].item(),
                 "madman_range" : 1,
                 "agent_filepath" : "pelicanAgent_3_buoys.py",
                 "agent_name" : "Pelican_Agent_3_Bouys",
@@ -35,11 +48,8 @@ def create_game_config_json(param_instance):
                 "render_width" : 310
             },
             "torpedo" : {
-                #TODO: Fix this speed parameter
-                "speed" : [
-                    param_instance["speed"].item(), 
-                    param_instance["speed"].item()
-                ],
+                "speed" : compute_torpedo_speeds(param_instance["turn_limit"].item(),
+                                                 param_instance["speed"].item()),
                 "turn_limit" : param_instance["turn_limit"].item(),
                 "hunt" : True,
                 "search_range" : param_instance["search_range"].item()

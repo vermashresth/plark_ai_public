@@ -451,6 +451,7 @@ class Newgame():
 		self.escape_rule = kwargs.get('escape_rule', game_config['game_rules']['escape_rule'])
 
 		# Pelican settings
+                # Are the start positions read in from the json here?
 		self.pelican_start_col = kwargs.get('pelican_start_col', game_config.get('game_rules', {}).get('pelican', {}).get('start_col', int(self.map_width/2)))
 		self.pelican_start_row = kwargs.get('pelican_start_row', game_config.get('game_rules', {}).get('pelican', {}).get('start_row', 0))
 		self.pelican_parameters = {

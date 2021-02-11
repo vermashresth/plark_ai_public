@@ -24,6 +24,7 @@ default_sonobuoys_lb = 15
 default_sonobuoys_ub = 25
 turn_limit_lb = 1
 turn_limit_ub = 3
+#Torpedo speed is the speed in the first turn, the rest of the turn speeds are computed
 speed_lb = 2
 speed_ub = 4
 search_range_lb = 2
