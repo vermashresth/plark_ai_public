@@ -262,6 +262,18 @@ def custom_eval(model, env, n_eval_episodes=10, deterministic=True,
         return episode_rewards, episode_lengths, totalwin
     return mean_reward, std_reward, totalwin
 
+def loadAgent(self, filepath, algorithm_type):
+    try:
+	if algorithm_type.lower() == 'dqn':
+	    self.model = DQN.load(filepath)
+	elif algorithm_type.lower() == 'ppo2':
+	    self.model = PPO2.load(filepath)
+	elif algorithm_type.lower() == 'a2c':
+	    self.model = A2C.load(filepath)
+	elif algorithm_type.lower() == 'acktr':
+	    self.model = ACKTR.load(filepath)
+	except:
+	    raise ValueError('Error loading panther agent. File : "' + filepath + '" does not exsist' )
 
 def og_load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, panther_agent_filepath, panther_agent_name, config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',video_path='/Components/plark_ai_flask/builtangularSite/dist/assets/videos'):
     """
