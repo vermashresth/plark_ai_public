@@ -70,10 +70,12 @@ def train_until(model, env, victory_threshold=0.8, victory_trials=10, max_second
     achieved_goal = max_victory_fraction >= victory_threshold
     return achieved_goal, steps, elapsed_seconds
 
-def check_victory(model,env,trials = 10):
+def check_victory(model,env,trials = 10, report_separate = False):
     victory_count = 0
     list_of_reward, n_steps, victories = evaluate_policy(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
 
+    if report_separate:
+        return victories, list_of_reward
     victory_count = len([v for v in victories if v == True])
     logger.info('victory_count = '+ str(victory_count))        
     avg_reward = float(sum(list_of_reward))/len(list_of_reward)
