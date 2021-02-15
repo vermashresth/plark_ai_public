@@ -225,10 +225,10 @@ def run_deep_pnm(exp_name,
 
     parallel = False
     # Commented out for debugging
-    #if model_type.lower() == 'ppo2':
-    #    parallel = True
+    if model_type.lower() == 'ppo2':
+        parallel = True
 
-    log_dir_base = 'deep_pnm/'
+    log_dir_base = '/deep_pnm/'
     os.makedirs(log_dir_base, exist_ok = True)
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json'
 
