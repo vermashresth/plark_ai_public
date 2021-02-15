@@ -31,6 +31,7 @@ from tensorboardX import SummaryWriter
 import helper 
 
 # To solve linear programs
+# !pip install lemkelcp
 import lemkelcp as lcp
 
 import tensorflow as tf
@@ -352,7 +353,7 @@ def run_deep_pnm(exp_name,
 
 if __name__ == '__main__':
     basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-    basepath = 'data/agents/models'
+    basepath = '/data/agents/models'
     exp_name = 'test_' + basicdate
     exp_path = os.path.join(basepath, exp_name)
 
@@ -371,3 +372,5 @@ if __name__ == '__main__':
                   log_to_tb = True,
                   image_based = False)
     # python deep_pnm.py 
+
+
