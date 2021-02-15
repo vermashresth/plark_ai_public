@@ -1,3 +1,4 @@
+# +
 import PIL.Image
 from IPython.display import display,clear_output,HTML
 from IPython.display import Image as DisplayImage
@@ -12,6 +13,8 @@ import imageio
 import numpy as np
 import io
 import os
+from copy import deepcopy
+
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.evaluation import evaluate_policy
 from stable_baselines.common.vec_env import SubprocVecEnv
@@ -20,6 +23,7 @@ from plark_game import classes
 from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 from gym_plark.envs.plark_env import PlarkEnv
 import datetime
+# -
 
 from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
@@ -44,79 +48,141 @@ log_dir_base = './pnm_logs/'
 os.makedirs(log_dir_base, exist_ok=True)
 
 
+# +
+# def compute_payoff_matrix(driving_agent,
+#                           keep_instances,
+#                           model_type,
+#                           policy,
+#                           payoffs,
+#                           env,
+#                           players,
+#                           opponents,
+#                           trials = 1000):
+
+#     payoffs.resize((len(players), len(opponents)))
+
+#     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#     # TODO: more efficient payoffs computation by parallel envs !!!
+#     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#     # Adding payoff for the last row player
+#     model = players[-1]
+#     if keep_instances:
+#         model = helper.loadAgent(model, model_type)
+#     if driving_agent == 'pelican':
+#         #env.set_pelican(model)
+#         env.env_method(method_name='set_pelican', method_args=[model])        
+#     else:
+#         #env.set_panther(model)        
+#         env.env_method(method_name='set_panther', method_args=[model])
+        
+#     for i, opponent in enumerate(opponents):
+#         if keep_instances == False: # i.e., if we want to load from file...
+#             opponent = helper.loadAgent(opponent, model_type)
+#         if driving_agent == 'pelican':
+#             #env.set_panther(opponent)
+#             env.env_method(method_name='set_panther', method_args=[opponent])
+#         else:
+#             #env.set_pelican(opponent)
+#             env.env_method(method_name='set_pelican', method_args=[opponent])            
+#         victory_count, avg_reward = helper.check_victory(model, env, trials = trials)
+#         if driving_agent == 'pelican':
+#             payoffs[-1, i] = avg_reward
+#         else:
+#             payoffs[i, -1] = avg_reward
+
+#     # Adding payoff for all the old players against the last column player
+#     opponent = opponents[-1]
+#     if keep_instances:
+#         opponent = helper.loadAgent(opponent, model_type)
+#     if driving_agent == 'pelican':
+#         #env.set_panther(opponent)
+#         env.env_method(method_name='set_panther', method_args=[opponent])        
+#     else:
+#         #env.set_pelican(opponent)
+#         env.env_method(method_name='set_pelican', method_args=[opponent])        
+
+#     for i, player in enumerate(players):
+#         if keep_instances == False: # i.e., if we want to load from file...
+#             player = helper.loadAgent(player, model_type)
+#         if driving_agent == 'pelican':
+#             #env.set_pelican(player)
+#             env.env_method(method_name='set_pelican', method_args=[player])                    
+#         else:
+#             #env.set_panther(player)
+#             env.env_method(method_name='set_panther', method_args=[player])                    
+#         victory_count, avg_reward = helper.check_victory(player, env, trials = trials)
+#         if driving_agent == 'pelican':
+#             payoffs[i, -1] = avg_reward
+#         else:
+#             payoffs[-1, i] = avg_reward
+
+# +
+def get_payoffs(protagonist, 
+                adversaries,
+                model_type,
+                driving_agent,
+                trials = 1000,  
+                config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json',
+                image_based=False):
+
+    envs = []
+    #for i, panther in enumerate(panthers):
+    for adversary in adversaries:
+        if keep_instances == False:
+            panther = helper.loadAgent(panther, model_type)
+
+        envs.append(PlarkEnv(driving_agent = driving_agent,
+                    config_file_path = config_file_path,
+                    image_based = image_based,
+                    random_panther_start_position = True,
+                    max_illegal_moves_per_turn = 3))
+        
+        if driving_agent == 'pelican':
+            envs[-1].set_panther(adversary)            
+        else:
+            envs[-1].set_pelican(adversary)
+    env = SubprocVecEnv([lambda:envs])
+    
+    # Need to see if we can convert the returned values into a vector
+    victory_count, avg_reward = helper.check_victory(model, env, trials = trials)
+    return victory_count, avg_reward
+    
+    
 def compute_payoff_matrix(driving_agent,
                           keep_instances,
                           model_type,
                           policy,
                           payoffs,
                           env,
-                          players,
-                          opponents,
-                          trials = 1000):
+                          pelicans,
+                          panthers,
+                          trials = 1000,                                
+                          config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json',
+                          image_based=False):
+    
+    payoffs.resize((len(pelicans), len(panthers)))
 
-    payoffs.resize((len(players), len(opponents)))
+    victory_count, avg_reward = get_payoffs(pelicans[-1], panthers, model_type, 'pelican')
+     
+    # update payoffs using avg_reward    
+    #if driving_agent == 'pelican':
+    #    payoffs[-1, i] = avg_reward
+    
+    victory_count, avg_reward = get_payoffs(panthers[-1], pelicans, model_type, 'panther')
+    
+    # update payoffs using avg_reward    
+    #if driving_agent == 'pelican':
+    #    payoffs[-1, i] = avg_reward
 
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # TODO: more efficient payoffs computation by parallel envs !!!
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # Adding payoff for the last row player
-    model = players[-1]
-    if keep_instances:
-        model = helper.loadAgent(model, model_type)
-    if driving_agent == 'pelican':
-        #env.set_pelican(model)
-        env.env_method(method_name='set_pelican', method_args=[model])        
-    else:
-        #env.set_panther(model)        
-        env.env_method(method_name='set_panther', method_args=[model])
-        
-    for i, opponent in enumerate(opponents):
-        if keep_instances == False: # i.e., if we want to load from file...
-            opponent = helper.loadAgent(opponent, model_type)
-        if driving_agent == 'pelican':
-            #env.set_panther(opponent)
-            env.env_method(method_name='set_panther', method_args=[opponent])
-        else:
-            #env.set_pelican(opponent)
-            env.env_method(method_name='set_pelican', method_args=[opponent])            
-        victory_count, avg_reward = helper.check_victory(model, env, trials = trials)
-        if driving_agent == 'pelican':
-            payoffs[-1, i] = avg_reward
-        else:
-            payoffs[i, -1] = avg_reward
 
-    # Adding payoff for all the old players against the last column player
-    opponent = opponents[-1]
-    if keep_instances:
-        opponent = helper.loadAgent(opponent, model_type)
-    if driving_agent == 'pelican':
-        #env.set_panther(opponent)
-        env.env_method(method_name='set_panther', method_args=[opponent])        
-    else:
-        #env.set_pelican(opponent)
-        env.env_method(method_name='set_pelican', method_args=[opponent])        
-
-    for i, player in enumerate(players):
-        if keep_instances == False: # i.e., if we want to load from file...
-            player = helper.loadAgent(player, model_type)
-        if driving_agent == 'pelican':
-            #env.set_pelican(player)
-            env.env_method(method_name='set_pelican', method_args=[player])                    
-        else:
-            #env.set_panther(player)
-            env.env_method(method_name='set_panther', method_args=[player])                    
-        victory_count, avg_reward = helper.check_victory(player, env, trials = trials)
-        if driving_agent == 'pelican':
-            payoffs[i, -1] = avg_reward
-        else:
-            payoffs[-1, i] = avg_reward
+# -
 
 def train_agent_against_mixture(driving_agent,
                                 keep_instances,
                                 policy,
                                 exp_path,
                                 model,
-                                env,
+                                #env,
                                 tests,
                                 mixture,
                                 testing_interval,
@@ -126,40 +192,56 @@ def train_agent_against_mixture(driving_agent,
                                 tb_writer,
                                 tb_log_name,
                                 early_stopping = True,
-                                previous_steps = 0):       
+                                previous_steps = 0,
+                                config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json',
+                                image_based=False):       
         
 
     opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
     steps = 0
-    
-    print("Wrapper Method Call Test Start")
-    env.env_method('wrapper_test_function')
-    print("Wrapper Method Call Test End")
-    
-    
+        
+    envs = []
     for opponent_model in opponents:
+
         if keep_instances == False:
             opponent_model = helper.loadAgent(opponent_model, model_type)
+
+        envs.append(PlarkEnv(driving_agent = driving_agent,
+                 config_file_path = config_file_path,
+                 image_based = image_based,
+                 random_panther_start_position = True,
+                 max_illegal_moves_per_turn = 3))   
+        
         if driving_agent == 'pelican':
-            #env.set_panther(opponent_model)
-            env.env_method('set_panther', opponent_model)            
+            opponent_model.set_env(SubprocVecEnv([lambda:PlarkEnv(driving_agent='panther',
+                                            config_file_path = config_file_path,
+                                            image_based = image_based,
+                                            random_panther_start_position = True,
+                                            max_illegal_moves_per_turn = 3)]))
+            envs[-1].set_panther(opponent_model)            
         else:
-            #env.set_pelican(opponent_model)
-            env.env_method('set_pelican', opponent_model)
-            
-        agents_filepath, new_steps = train_agent(exp_path,
-                               model,
-                               env,
-                               testing_interval,
-                               testing_interval,
-                               model_type,
-                               basicdate,
-                               tb_writer,
-                               tb_log_name,
-                               early_stopping = True,
-                               previous_steps = steps,
-                               save_model = False)
-        steps += new_steps
+            opponent_model.set_env(SubprocVecEnv([lambda:PlarkEnv(driving_agent='pelican',
+                                            config_file_path = config_file_path,
+                                            image_based = image_based,
+                                            random_panther_start_position = True,
+                                            max_illegal_moves_per_turn = 3)]))
+            envs[-1].set_pelican(opponent_model)            
+  
+    env = SubprocVecEnv([lambda:env for env in envs])
+        
+    agents_filepath, new_steps = train_agent(exp_path,
+                           model,
+                           env,
+                           testing_interval,
+                           testing_interval,
+                           model_type,
+                           basicdate,
+                           tb_writer,
+                           tb_log_name,
+                           early_stopping = True,
+                           previous_steps = steps,
+                           save_model = False)
+    steps += new_steps
     if not keep_instances:
         basicdate = basicdate + '_steps_' + str(previous_steps + steps)
         agent_filepath, _, _ = helper.save_model_with_env_settings(exp_path, model, model_type, env, basicdate)
@@ -219,6 +301,10 @@ def run_deep_pnm(exp_name,
                  num_parallel_envs = 1,
                  keep_instances = False):
 
+    # Initialize the supports of opponents
+    pelicans = []
+    panthers = []    
+    
     pelican_training_steps = 0
     panther_training_steps = 0
     pelican_model_type = model_type
@@ -275,11 +361,11 @@ def run_deep_pnm(exp_name,
                                       random_panther_start_position = True,
                                       max_illegal_moves_per_turn = 3)
 
-    pelican_model = helper.make_new_model(model_type, policy, pelican_env)
+    pelicans.append(helper.make_new_model(model_type, policy, pelican_env))
     logger.info('Training initial pelican')
         
     pelican_agent_filepath, steps = train_agent(pelican_tmp_exp_path,
-                                                pelican_model,
+                                                pelicans[-1],
                                                 pelican_env,
                                                 pelican_testing_interval,
                                                 pelican_max_learning_steps,
@@ -306,10 +392,10 @@ def run_deep_pnm(exp_name,
                                       random_panther_start_position = True,
                                       max_illegal_moves_per_turn = 3)
 
-    panther_model = helper.make_new_model(model_type, policy, panther_env)
+    panthers.append(helper.make_new_model(model_type, policy, panther_env))
     logger.info('Training initial panther')
     panther_agent_filepath, steps = train_agent(panther_tmp_exp_path,
-                                                panther_model,
+                                                panthers[-1],
                                                 panther_env,
                                                 panther_testing_interval,
                                                 panther_max_learning_steps,
@@ -322,15 +408,13 @@ def run_deep_pnm(exp_name,
                                                 save_model = keep_instances)
     panther_training_steps = panther_training_steps + steps
 
-    # Initialize the mixture of opponents
-    pelicans = []
-    panthers = []
-    if keep_instances:
-        pelicans.append(pelican_model)
-        panthers.append(panther_model)
-    else:
-        pelicans.append(pelican_agent_filepath)
-        panthers.append(panther_agent_filepath)
+
+    #if keep_instances:
+    #    pelicans.append(deepcopy(pelican_model))
+    #    panthers.append(deepcopy(panther_model))
+    #else:
+    #    pelicans.append(pelican_agent_filepath)
+    #    panthers.append(panther_agent_filepath)
 
     mixture_pelicans = np.array([1.])
     mixture_panthers = np.array([1.])
@@ -342,13 +426,13 @@ def run_deep_pnm(exp_name,
     for i in range(deep_pnm_iterations):
         logger.info('Deep PNM iteration ' + str(i) + ' of ' + str(deep_pnm_iterations))
         logger.info('Training pelican')
-        pelican_model = helper.make_new_model(model_type, policy, pelican_env)
+        pelicans.append(helper.make_new_model(model_type, policy, pelican_env))
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
                                                                     keep_instances,
                                                                     policy,
                                                                     exp_path,
-                                                                    pelican_model,
-                                                                    pelican_env,
+                                                                    pelicans[-1],
+                                                                    #pelican_env,
                                                                     panthers,
                                                                     mixture_pelicans,
                                                                     pelican_testing_interval,
@@ -363,13 +447,13 @@ def run_deep_pnm(exp_name,
         pelican_training_steps = pelican_training_steps + steps
 
         logger.info('Training panther')
-        panther_model = helper.make_new_model(model_type, policy, panther_env)
+        panthers.append(helper.make_new_model(model_type, policy, panther_env))
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
                                                                     keep_instances,
                                                                     policy,
                                                                     exp_path,
-                                                                    panther_model,
-                                                                    panther_env,
+                                                                    panthers[-1],
+                                                                    #panther_env,
                                                                     pelicans,
                                                                     mixture_panthers,
                                                                     panther_testing_interval,
@@ -381,12 +465,12 @@ def run_deep_pnm(exp_name,
                                                                     previous_steps = panther_training_steps)
         panther_training_steps = panther_training_steps + steps
 
-        if keep_instances:
-            pelicans.append(pelican_model)
-            panthers.append(panther_model)
-        else:
-            pelicans.append(pelican_agent_filepath)
-            panthers.append(panther_agent_filepath)
+        #if keep_instances:
+        #    pelicans.append(pelican_model)
+        #    panthers.append(panther_model)
+        #else:
+        #    pelicans.append(pelican_agent_filepath)
+        #    panthers.append(panther_agent_filepath)
 
 
         # Computing the payoff matrices and solving the corresponding LPs
@@ -455,5 +539,7 @@ def main():
 if __name__ == '__main__':
     main()
 # -
+
+
 
 
