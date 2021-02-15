@@ -264,7 +264,7 @@ def custom_eval(model, env, n_eval_episodes=10, deterministic=True,
         return episode_rewards, episode_lengths, totalwin
     return mean_reward, std_reward, totalwin
 
-def loadAgent(self, filepath, algorithm_type):
+def loadAgent(filepath, algorithm_type):
     try:
         if algorithm_type.lower() == 'dqn':
             self.model = DQN.load(filepath)
