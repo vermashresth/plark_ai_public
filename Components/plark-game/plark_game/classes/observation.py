@@ -389,7 +389,7 @@ class Observation():
                                         obs_label_from_state.append('torp x')
                                         obs_label_from_state.append('torp y')
 
-                logger.info("Observation: {}".format(obs))
-                logger.info("Observation space size: {}".format(len(obs)))
+                #logger.info("Observation: {}".format(obs))
+                #logger.info("Observation space size: {}".format(len(obs)))
                 # logger.info("Observation labels: {}".format(obs_label_from_state))
                 return obs
