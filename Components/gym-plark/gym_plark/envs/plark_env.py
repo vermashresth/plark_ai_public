@@ -217,6 +217,9 @@ class PlarkEnv(gym.Env):
 	def set_panther(self, panther):
             self.env.activeGames[len(self.env.activeGames)-1].set_panther(panther)
 
+	def wrapper_test_function(self):
+            print("hello there!")
+
 	def reset(self):
 		#If a game already exists. reset
 		if len(self.env.activeGames) > 0:
