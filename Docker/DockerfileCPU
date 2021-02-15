@@ -23,6 +23,7 @@ RUN apt-get -y update \
     unzip \
     xvfb \
     libopenmpi-dev \
+    vim \
     zlib1g-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -59,6 +60,7 @@ ADD requirements.txt /usr/local/requirements.txt
 RUN pip install --upgrade -r /usr/local/requirements.txt
 
 ADD run_servers.sh /run_servers.sh
+ADD install_components.sh /install_components.sh
 ADD plark_robot_tests /plark_robot_tests
 # set working directory
 WORKDIR /
