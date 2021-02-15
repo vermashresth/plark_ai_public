@@ -41,9 +41,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-
-
-
 def compute_payoff_matrix(driving_agent,
                           keep_instances,
                           model_type,
@@ -209,7 +206,10 @@ def run_deep_pnm(exp_name,
         os.makedirs(pelican_tmp_exp_path, exist_ok = True)
         panther_tmp_exp_path = os.path.join(exp_path, 'panther')
         os.makedirs(panther_tmp_exp_path, exist_ok = True)
-
+    else:
+        pelican_tmp_exp_path = None
+        panther_tmp_exp_path = None
+        
     if log_to_tb:
         writer = SummaryWriter(exp_path)
         pelican_tb_log_name = 'pelican'
@@ -224,12 +224,13 @@ def run_deep_pnm(exp_name,
         policy = 'MlpPolicy'
 
     parallel = False
-    if model_type.lower() == 'ppo2':
-        parallel = True
+    # Commented out for debugging
+    #if model_type.lower() == 'ppo2':
+    #    parallel = True
 
     log_dir_base = 'deep_pnm/'
     os.makedirs(log_dir_base, exist_ok = True)
-    config_file_path = 'Components/plark-game/plark_game/game_config/10x10/balanced.json'
+    config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json'
 
     # Train initial pelican vs default panther
     if parallel:
@@ -257,10 +258,8 @@ def run_deep_pnm(exp_name,
 
     pelican_model = helper.make_new_model(model_type, policy, pelican_env)
     logger.info('Training initial pelican')
-    pelican_agent_filepath, steps = train_agent(parallel,
-                                                num_parallel_envs,
-                                                image_based,
-                                                pelican_tmp_exp_path,
+        
+    pelican_agent_filepath, steps = train_agent(pelican_tmp_exp_path,
                                                 pelican_model,
                                                 pelican_env,
                                                 pelican_testing_interval,
@@ -270,7 +269,7 @@ def run_deep_pnm(exp_name,
                                                 writer,
                                                 pelican_tb_log_name,
                                                 early_stopping = True,
-                                                previous_step = 0,
+                                                previous_steps = 0,
                                                 save_model = keep_instances)
     pelican_training_steps = pelican_training_steps + steps
 
@@ -290,10 +289,7 @@ def run_deep_pnm(exp_name,
 
     panther_model = helper.make_new_model(model_type, policy, panther_env)
     logger.info('Training initial panther')
-    panther_agent_filepath, steps = train_agent(parallel,
-                                                num_parallel_envs,
-                                                image_based,
-                                                panther_tmp_exp_path,
+    panther_agent_filepath, steps = train_agent(panther_tmp_exp_path,
                                                 panther_model,
                                                 panther_env,
                                                 panther_testing_interval,
@@ -303,7 +299,7 @@ def run_deep_pnm(exp_name,
                                                 writer,
                                                 panther_tb_log_name,
                                                 early_stopping = True,
-                                                previous_step = 0,
+                                                previous_steps = 0,
                                                 save_model = keep_instances)
     panther_training_steps = panther_training_steps + steps
 
@@ -404,7 +400,9 @@ def run_deep_pnm(exp_name,
     basewidth,hsize = helper.make_video(pelican_model, pelican_env, video_path)
     return video_path, basewidth, hsize
 
-if __name__ == '__main__':
+
+# +
+def main():
     basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
     basepath = '/data/agents/models'
     exp_name = 'test_' + basicdate
@@ -425,4 +423,10 @@ if __name__ == '__main__':
                   log_to_tb = True,
                   image_based = False,
                   num_parallel_envs = 1,
-                  keep_instances = True)
+                  keep_instances = True)    
+
+if __name__ == '__main__':
+    main()
+# -
+
+
