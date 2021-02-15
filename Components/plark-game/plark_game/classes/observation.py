@@ -26,6 +26,17 @@ class Observation():
                 self.max_torpedo_turns = 3
                 self.max_torpedo_speed = 3
 
+                #Simon's upper bounds
+                #self.max_grid_width = 35
+                #self.max_grid_height = 35
+                #self.max_sonobuoys = 25
+                #self.max_turns = 50
+                #self.max_pelican_moves = 25
+                #self.max_panther_moves = 3
+                #self.max_torpedoes = 5
+                #self.max_torpedo_turns = 3
+                #self.max_torpedo_speed = 4
+
                 #These arguments don't even seem to be passed - kwargs doesn't contain
                 #any of these
                 # self.max_grid_width = kwargs.get('max_grid_width',30)
