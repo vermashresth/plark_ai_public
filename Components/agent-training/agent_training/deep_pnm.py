@@ -40,6 +40,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+log_dir_base = './pnm_logs/'
+os.makedirs(log_dir_base, exist_ok=True)
+
 
 def compute_payoff_matrix(driving_agent,
                           keep_instances,
@@ -61,17 +64,21 @@ def compute_payoff_matrix(driving_agent,
     if keep_instances:
         model = helper.loadAgent(model, model_type)
     if driving_agent == 'pelican':
-        env.set_pelican(model)
+        #env.set_pelican(model)
+        env.env_method(method_name='set_pelican', method_args=[model])        
     else:
-        env.set_panther(model)
-
+        #env.set_panther(model)        
+        env.env_method(method_name='set_panther', method_args=[model])
+        
     for i, opponent in enumerate(opponents):
         if keep_instances == False: # i.e., if we want to load from file...
             opponent = helper.loadAgent(opponent, model_type)
         if driving_agent == 'pelican':
-            env.set_panther(opponent)
+            #env.set_panther(opponent)
+            env.env_method(method_name='set_panther', method_args=[opponent])
         else:
-            env.set_pelican(opponent)
+            #env.set_pelican(opponent)
+            env.env_method(method_name='set_pelican', method_args=[opponent])            
         victory_count, avg_reward = helper.check_victory(model, env, trials = trials)
         if driving_agent == 'pelican':
             payoffs[-1, i] = avg_reward
@@ -83,17 +90,21 @@ def compute_payoff_matrix(driving_agent,
     if keep_instances:
         opponent = helper.loadAgent(opponent, model_type)
     if driving_agent == 'pelican':
-        env.set_panther(opponent)
+        #env.set_panther(opponent)
+        env.env_method(method_name='set_panther', method_args=[opponent])        
     else:
-        env.set_pelican(opponent)
+        #env.set_pelican(opponent)
+        env.env_method(method_name='set_pelican', method_args=[opponent])        
 
     for i, player in enumerate(players):
         if keep_instances == False: # i.e., if we want to load from file...
             player = helper.loadAgent(player, model_type)
         if driving_agent == 'pelican':
-            env.set_pelican(player)
+            #env.set_pelican(player)
+            env.env_method(method_name='set_pelican', method_args=[player])                    
         else:
-            env.set_panther(player)
+            #env.set_panther(player)
+            env.env_method(method_name='set_panther', method_args=[player])                    
         victory_count, avg_reward = helper.check_victory(player, env, trials = trials)
         if driving_agent == 'pelican':
             payoffs[i, -1] = avg_reward
@@ -103,6 +114,7 @@ def compute_payoff_matrix(driving_agent,
 def train_agent_against_mixture(driving_agent,
                                 keep_instances,
                                 policy,
+                                exp_path,
                                 model,
                                 env,
                                 tests,
@@ -110,20 +122,31 @@ def train_agent_against_mixture(driving_agent,
                                 testing_interval,
                                 max_steps,
                                 model_type,
-                                basicdate,tb_writer,
+                                basicdate,
+                                tb_writer,
                                 tb_log_name,
                                 early_stopping = True,
-                                previous_steps = 0):
+                                previous_steps = 0):       
+        
+
     opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
     steps = 0
+    
+    print("Wrapper Method Call Test Start")
+    env.env_method('wrapper_test_function')
+    print("Wrapper Method Call Test End")
+    
+    
     for opponent_model in opponents:
         if keep_instances == False:
             opponent_model = helper.loadAgent(opponent_model, model_type)
         if driving_agent == 'pelican':
-            env.set_panther(opponent_model)
+            #env.set_panther(opponent_model)
+            env.env_method('set_panther', opponent_model)            
         else:
-            env.set_pelican(opponent_model)
-
+            #env.set_pelican(opponent_model)
+            env.env_method('set_pelican', opponent_model)
+            
         agents_filepath, new_steps = train_agent(exp_path,
                                model,
                                env,
@@ -201,14 +224,10 @@ def run_deep_pnm(exp_name,
     pelican_model_type = model_type
     panther_model_type = model_type
 
-    if not keep_instances:
-        pelican_tmp_exp_path = os.path.join(exp_path, 'pelican')
-        os.makedirs(pelican_tmp_exp_path, exist_ok = True)
-        panther_tmp_exp_path = os.path.join(exp_path, 'panther')
-        os.makedirs(panther_tmp_exp_path, exist_ok = True)
-    else:
-        pelican_tmp_exp_path = None
-        panther_tmp_exp_path = None
+    pelican_tmp_exp_path = os.path.join(exp_path, 'pelican')
+    os.makedirs(pelican_tmp_exp_path, exist_ok = True)
+    panther_tmp_exp_path = os.path.join(exp_path, 'panther')
+    os.makedirs(panther_tmp_exp_path, exist_ok = True)
         
     if log_to_tb:
         writer = SummaryWriter(exp_path)
@@ -313,8 +332,8 @@ def run_deep_pnm(exp_name,
         pelicans.append(pelican_agent_filepath)
         panthers.append(panther_agent_filepath)
 
-    mixture1 = np.array([1.])
-    mixture2 = np.array([1.])
+    mixture_pelicans = np.array([1.])
+    mixture_panthers = np.array([1.])
     payoffs = np.zeros((1,1))
 
     # Train agent vs agent
@@ -331,7 +350,7 @@ def run_deep_pnm(exp_name,
                                                                     pelican_model,
                                                                     pelican_env,
                                                                     panthers,
-                                                                    mixture1,
+                                                                    mixture_pelicans,
                                                                     pelican_testing_interval,
                                                                     pelican_max_learning_steps,
                                                                     pelican_model_type,
@@ -339,6 +358,8 @@ def run_deep_pnm(exp_name,
                                                                     writer,
                                                                     pelican_tb_log_name,
                                                                     previous_steps = pelican_training_steps)
+        
+        
         pelican_training_steps = pelican_training_steps + steps
 
         logger.info('Training panther')
@@ -350,7 +371,7 @@ def run_deep_pnm(exp_name,
                                                                     panther_model,
                                                                     panther_env,
                                                                     pelicans,
-                                                                    mixture2,
+                                                                    mixture_panthers,
                                                                     panther_testing_interval,
                                                                     panther_max_learning_steps,
                                                                     panther_model_type,
@@ -378,15 +399,21 @@ def run_deep_pnm(exp_name,
                               pelican_test_env,
                               pelicans,
                               panthers)
-
-        mixture1, exit_code1, exit_string1 = lcp.lemkelcp(payoffs, np.zeros((len(pelicans),)))
-
+        logger.info(payoffs)
+        np.save('%s/itartion%d.npy' % (log_dir_base, i), payoffs)
+        mixture_pelicans, exit_code1, exit_string1 = lcp.lemkelcp(payoffs, np.zeros((len(pelicans),)))
+        logger.info(mixture_pelicans)
+        np.save('%s/mixture1_%d.npy' % (log_dir_base, i), mixture_pelicans)        
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # Let's double check that we really need the transpose !!!
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        mixture2, exit_code2, exit_string2 = lcp.lemkelcp(-payoffs.transpose(), np.zeros((len(panthers),)))
+        mixture_panthers, exit_code2, exit_string2 = lcp.lemkelcp(-payoffs.transpose(), np.zeros((len(panthers),)))
+        logger.info(mixture_panthers)
+        np.save('%s/mixture2_%d.npy' % (log_dir_base, i), mixture_panthers)                
         if exit_code1 != 0 or exit_code2 != 0:
             print('Cannot solve the LPs...')
+            print('Exit code 1 %s' % exit_code1)
+            print('Exit code 2 %s' % exit_code2)            
             break
 
     # Saving final version of the agents
@@ -414,10 +441,10 @@ def main():
     run_deep_pnm(exp_name,
                  exp_path,
                  basicdate,
-                  pelican_testing_interval = 1000,
-                  pelican_max_learning_steps = 50000,
-                  panther_testing_interval = 1000,
-                  panther_max_learning_steps = 50000,
+                  pelican_testing_interval = 250,
+                  pelican_max_learning_steps = 250,
+                  panther_testing_interval = 250,
+                  panther_max_learning_steps = 250,
                   deep_pnm_iterations = 200,
                   model_type = 'PPO2',
                   log_to_tb = True,
