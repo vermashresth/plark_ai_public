@@ -54,7 +54,8 @@ def compute_payoff_matrix(pelican,
                           panthers,
                           trials = 1000,
                           image_based=False,
-                          num_parallel_envs=1):
+                          num_parallel_envs=1,
+                          config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json'):
 
     payoffs = np.pad(payoffs, 
                      [(0, len(pelicans) - payoffs.shape[0]), 
@@ -63,18 +64,22 @@ def compute_payoff_matrix(pelican,
 
     # Adding payoff for the last row player        
     for i, opponent in enumerate(panthers):
+        print(i)
+        print(opponent)
         env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent='pelican',
                                                    panther_agent_filepath=opponent,
                                                    config_file_path=config_file_path,
                                                    image_based=image_based,
                                                    random_panther_start_position=True,
                                                    max_illegal_moves_per_turn=3) for _ in range(num_parallel_envs)])            
-
+        
         victory_count, avg_reward = helper.check_victory(pelican, env, trials = trials)
         payoffs[-1, i] = avg_reward
 
             
     for i, opponent in enumerate(pelicans):
+        print(i)
+        print(opponent)        
         env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent='panther',
                                                    panther_agent_filepath=opponent,
                                                    config_file_path=config_file_path,
@@ -82,6 +87,7 @@ def compute_payoff_matrix(pelican,
                                                    random_panther_start_position=True,
                                                    max_illegal_moves_per_turn=3) for _ in range(num_parallel_envs)])            
 
+        
         victory_count, avg_reward = helper.check_victory(panther, env, trials = trials)
         
         # Given that we are storing everything in one table, and the value below is now computed 
@@ -109,10 +115,7 @@ def train_agent_against_mixture(driving_agent,
                                 image_based=False,
                                 num_parallel_envs=1):       
         
-
-    #opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
     opponents = np.random.choice(tests, size=num_parallel_envs, p=mixture)    
-    steps = 0
                 
     if driving_agent == 'pelican':            
         env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent=driving_agent,
@@ -139,10 +142,10 @@ def train_agent_against_mixture(driving_agent,
                                              tb_writer,
                                              tb_log_name,
                                              early_stopping = True,
-                                             previous_steps = steps,
-                                             save_model = False)
-    steps += new_steps
-    return agent_filepath, steps
+                                             previous_steps = previous_steps,
+                                             save_model = True)
+    
+    return agent_filepath, new_steps
 
 def train_agent(exp_path,
                 model,
@@ -269,7 +272,7 @@ def run_deep_pnm(exp_name,
                                                 basicdate,
                                                 writer,
                                                 pelican_tb_log_name,
-                                                early_stopping = False,
+                                                early_stopping = True,
                                                 previous_steps = 0,
                                                 save_model = keep_instances)
     pelican_training_steps = pelican_training_steps + steps
@@ -299,7 +302,7 @@ def run_deep_pnm(exp_name,
                                                 basicdate,
                                                 writer,
                                                 panther_tb_log_name,
-                                                early_stopping = False,
+                                                early_stopping = True,
                                                 previous_steps = 0,
                                                 save_model = keep_instances)
     panther_training_steps = panther_training_steps + steps
@@ -423,7 +426,7 @@ def main():
                   model_type = 'PPO2',
                   log_to_tb = True,
                   image_based = False,
-                  num_parallel_envs = 50,
+                  num_parallel_envs = 5,
                   keep_instances = True)    
 
 if __name__ == '__main__':
