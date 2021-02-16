@@ -4,24 +4,15 @@ import os
 from stable_baselines.common.vec_env import SubprocVecEnv
 from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 from gym_plark.envs.plark_env import PlarkEnv
-
 from tensorboardX import SummaryWriter
-
-
 import helper
-
-# To solve linear programs
-# !pip install lemkelcp
-import lemkelcp as lcp
-
+import lp_solve
 import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.ERROR)
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-log_dir_base = 'pnm_logs/'
-os.makedirs(log_dir_base, exist_ok=True)
 
 
 def compute_payoff_matrix(driving_agent,
@@ -35,10 +26,6 @@ def compute_payoff_matrix(driving_agent,
                           trials = 1):
 
     payoffs = np.pad(payoffs, [(0, len(players) - payoffs.shape[0]), (0, len(opponents) - payoffs.shape[1])], mode='constant')
-
-    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # TODO: more efficient payoffs computation by parallel envs !!!
-    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # Adding payoff for the last row player
     model = players[-1]
     if not keep_instances:
@@ -100,11 +87,10 @@ def train_agent_against_mixture(driving_agent,
                                 tb_log_name,
                                 early_stopping = True,
                                 previous_steps = 0):       
-        
 
     opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
     steps = 0
-    
+
     for opponent_model in opponents:
         if not keep_instances:
             opponent_model = helper.loadAgent(opponent_model, model_type)
@@ -147,13 +133,12 @@ def train_agent(exp_path,
     steps = 0
     logger.info("Beginning training for {} steps".format(max_steps))
     #model.set_env(env)
-
     while steps < max_steps:
         logger.info("Training for {} steps".format(testing_interval))
         model.learn(testing_interval)
         steps = steps + testing_interval
         if early_stopping:
-            victory_count, avg_reward = helper.check_victory(model, env, trials = 1)
+            victory_count, avg_reward = helper.check_victory(model, env, trials = 10)
             if tb_writer is not None and tb_log_name is not None:
                 tb_steps = steps + previous_steps
                 logger.info("Writing to tensorboard for {} after {} steps".format(tb_log_name, tb_steps))
@@ -171,14 +156,14 @@ def train_agent(exp_path,
         agent_filepath = os.path.dirname(agent_filepath)
     return agent_filepath, steps
 
-def run_deep_pnm(exp_name,
+def run_pnm(exp_name,
                  exp_path,
                  basicdate,
                  pelican_testing_interval = 100,
                  pelican_max_learning_steps = 10000,
                  panther_testing_interval = 100,
                  panther_max_learning_steps = 10000,
-                 deep_pnm_iterations = 10000,
+                 pnm_iterations = 10000,
                  model_type = 'PPO2',
                  log_to_tb = False,
                  image_based = True,
@@ -213,7 +198,7 @@ def run_deep_pnm(exp_name,
     #if model_type.lower() == 'ppo2':
     #    parallel = True
 
-    log_dir_base = 'deep_pnm/'
+    log_dir_base = 'pnm_logs/'
     os.makedirs(log_dir_base, exist_ok = True)
     config_file_path = 'C:\\Users\Jacopo\Documents\plark_ai_public\Components\plark-game\plark_game\game_config\\10x10\\balanced.json'
 
@@ -303,10 +288,9 @@ def run_deep_pnm(exp_name,
     payoffs = np.zeros((1,1))
 
     # Train agent vs agent
-    logger.info('Deep Parallel Nash Memory')
-
-    for i in range(deep_pnm_iterations):
-        logger.info('Deep PNM iteration ' + str(i) + ' of ' + str(deep_pnm_iterations))
+    logger.info('Parallel Nash Memory (PNM)')
+    for i in range(pnm_iterations):
+        logger.info('PNM iteration ' + str(i) + ' of ' + str(pnm_iterations))
         logger.info('Training pelican')
         pelican_model = helper.make_new_model(model_type, policy, pelican_env)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
@@ -354,33 +338,26 @@ def run_deep_pnm(exp_name,
             pelicans.append(pelican_agent_filepath)
             panthers.append(panther_agent_filepath)
 
-
         # Computing the payoff matrices and solving the corresponding LPs
         # Only compute for pelican in the sparse env, that of panther is the negative traspose (game is zero-sum)
         payoffs = compute_payoff_matrix('pelican',
-                              keep_instances,
-                              model_type,
-                              policy,
-                              payoffs,
-                              pelican_test_env,
-                              pelicans,
-                              panthers)
+                                        keep_instances,
+                                        model_type,
+                                        policy,
+                                        payoffs,
+                                        pelican_test_env,
+                                        pelicans,
+                                        panthers)
         logger.info(payoffs)
         np.save('%s/payoffs_%d.npy' % (log_dir_base, i), payoffs)
-        mixture_pelicans, exit_code1, exit_string1 = lcp.lemkelcp(payoffs, np.zeros((len(pelicans),)))
+        mixture_pelicans = lp_solve.solve_zero_sum_game(payoffs)
+        mixture_pelicans /= np.sum(mixture_pelicans)
         logger.info(mixture_pelicans)
         np.save('%s/mixture1_%d.npy' % (log_dir_base, i), mixture_pelicans)        
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # Let's double check that we really need the transpose !!!
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        mixture_panthers, exit_code2, exit_string2 = lcp.lemkelcp(-payoffs.transpose(), np.zeros((len(panthers),)))
+        mixture_panthers = lp_solve.solve_zero_sum_game(-payoffs.transpose())
+        mixture_panthers /= np.sum(mixture_panthers)
         logger.info(mixture_panthers)
         np.save('%s/mixture2_%d.npy' % (log_dir_base, i), mixture_panthers)                
-        if exit_code1 != 0 or exit_code2 != 0:
-            print('Cannot solve the LPs...')
-            print('Exit code 1 %s' % exit_code1)
-            print('Exit code 2 %s' % exit_code2)            
-            break
 
     # Saving final version of the agents
     agent_filepath ,_, _= helper.save_model_with_env_settings(exp_path, pelican_model, pelican_model_type, pelican_env, basicdate)
@@ -389,7 +366,7 @@ def run_deep_pnm(exp_name,
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))
     # Make video
-    video_path =  os.path.join(exp_path, 'test_deep_pnm.mp4')
+    video_path =  os.path.join(exp_path, 'test_pnm.mp4')
     basewidth,hsize = helper.make_video(pelican_model, pelican_env, video_path)
     return video_path, basewidth, hsize
 
@@ -402,15 +379,15 @@ def main():
 
     logger.info(exp_path)
 
-    # run_deep_pnm(exp_name,exp_path,basicdate)
-    run_deep_pnm(exp_name,
+    # run_pnm(exp_name,exp_path,basicdate)
+    run_pnm(exp_name,
                  exp_path,
                  basicdate,
                   pelican_testing_interval = 25,
                   pelican_max_learning_steps = 25,
                   panther_testing_interval = 25,
                   panther_max_learning_steps = 25,
-                  deep_pnm_iterations = 20,
+                  pnm_iterations = 20,
                   model_type = 'PPO2',
                   log_to_tb = True,
                   image_based = False,
