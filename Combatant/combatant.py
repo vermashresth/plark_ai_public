@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 import pika
+import uuid
 
 from plark_game.classes.newgame import load_agent
 from plark_game.classes.pantherAgent_load_agent import Panther_Agent_Load_Agent
@@ -91,6 +92,7 @@ class Combatant:
         self.agent = load_combatant(
             agent_path, agent_name, basic_agents_path, game=None, **kwargs
         )
+        self.ready = False
 
     def get_action(self, ch, method, props, body):
 
@@ -110,14 +112,29 @@ class Combatant:
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
+    def send_ready(self, agent_type, conn, channel, queue):
+        """
+        Send a message to the battleground indicating we are ready.
+        """
+        channel.basic_publish(
+            exchange="",
+            routing_key=queue,
+            properties=pika.BasicProperties(
+            ),
+            body="{}_READY".format(agent_type.upper()),
+        )
+        self.ready = True
+        return True
+
+
 
 AGENTS_PATH = os.path.join(
-    "/plark_ai_public", "data", "agents", "models", "latest"
+    "/Users/nbarlow/plark_ai_public", "data", "agents", "models", "latest"
 )
 
 BASIC_AGENTS_PATH = os.path.normpath(
     os.path.join(
-        "/plark_ai_public",
+        "/Users/nbarlow/plark_ai_public",
         "Components",
         "plark-game",
         "plark_game",
@@ -137,7 +154,10 @@ def run_combatant(agent_type, agent_path, agent_name, basic_agents_path):
 
     agent_queue = "rpc_queue_{}".format(agent_type)
 
+    ready_queue = "rpc_queue_ready"
+
     if "RABBITMQ_HOST" in os.environ.keys():
+
         hostname = os.environ["RABBITMQ_HOST"]
     else:
         hostname = "localhost"
@@ -149,6 +169,7 @@ def run_combatant(agent_type, agent_path, agent_name, basic_agents_path):
     channel = connection.channel()
 
     channel.queue_declare(queue=agent_queue)
+    channel.queue_declare(queue=ready_queue)
 
     channel.basic_qos(prefetch_count=1)
 
@@ -156,6 +177,7 @@ def run_combatant(agent_type, agent_path, agent_name, basic_agents_path):
         queue=agent_queue, on_message_callback=agent.get_action
     )
 
+    agent.send_ready(agent_type, connection, channel, ready_queue)
     print(" [x] {} Awaiting RPC requests".format(agent_type.upper()))
     channel.start_consuming()
 
