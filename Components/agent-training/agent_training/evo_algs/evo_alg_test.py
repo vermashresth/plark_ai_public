@@ -9,6 +9,7 @@ if __name__ == '__main__':
     env.reset()
 
     env.step(1)
+    env.step(1)
 
 
 '''

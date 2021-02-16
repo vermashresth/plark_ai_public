@@ -35,6 +35,7 @@ from stable_baselines.common.evaluation import evaluate_policy
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 from plark_game import classes
 from gym_plark.envs import plark_env, plark_env_guided_reward, plark_env_top_left, plark_env_sonobuoy_deployment, panther_env_reach_top
+from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 
 from stable_baselines.bench import Monitor
 
@@ -49,66 +50,98 @@ import os
 import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.ERROR)
 
+#Reads all the game config file paths in /Components/plark-game/plark_game/game_config/
+#Well not all, we don't recurse down into 10x10/nn
+def read_game_config_paths():
+    import glob
+
+    config_file_directories = ["/Components/plark-game/plark_game/game_config/10x10/*.json", 
+                               "/Components/plark-game/plark_game/game_config/20x20/*.json", 
+                               "/Components/plark-game/plark_game/game_config/30x30/*.json"]
+    config_file_paths = []
+
+    for dr in config_file_directories:
+        config_file_paths += glob.glob(dr)
+
+    return config_file_paths
+
 log_dir = './logs'
 normalize = True
 os.makedirs(log_dir, exist_ok=True)
-env = panther_env_reach_top.PantherEnvReachTop(config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',image_based=False)
-env = Monitor(env, log_dir)
-if normalize:
-    env = DummyVecEnv([lambda: env])
-    env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=200., gamma=0.95) 
 
 n_eval_episodes = 10
-training_steps = 10
+training_steps = 1000
 
-model = PPO2('MlpPolicy', env, seed=5000)
+#For all configs, train on one config and then test on all the other configs
+#training_configs = ['/Components/plark-game/plark_game/game_config/10x10/balanced.json']
+#testing_configs = ['/Components/plark-game/plark_game/game_config/10x10/balanced_max_torps.json']
+training_configs = read_game_config_paths()
+testing_configs = read_game_config_paths()
 
-#Train
-model.learn(training_steps)
+for train_config in training_configs:
 
-#Evaluate
-print("****** STARTING EVALUATION *******")
+    print('Training on:', train_config)
 
-from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
-sparse_env = PlarkEnvSparse(config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced_max_torps.json', driving_agent='panther', image_based=False)
+    env = panther_env_reach_top.PantherEnvReachTop(config_file_path=train_config, \
+                                                   image_based=False)
+    env = Monitor(env, log_dir)
+    if normalize:
+        env = DummyVecEnv([lambda: env])
+        env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=200., gamma=0.95) 
 
-sparse_env = Monitor(sparse_env, log_dir)
+    model = PPO2('MlpPolicy', env, seed=5000)
 
-if normalize:
-    sparse_env = DummyVecEnv([lambda: sparse_env])
-    sparse_env = VecNormalize(sparse_env, norm_obs=True, norm_reward=False, clip_obs=200., gamma=0.95) 
+    #Train
+    model.learn(training_steps)
 
-mean_reward, n_steps = evaluate_policy(model, sparse_env, n_eval_episodes=n_eval_episodes, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=False)
-print("%s episodes,Mean Reward is %.3f,Number of steps is %d" % (n_eval_episodes,mean_reward,n_steps))
+    #Evaluate on all testing configs
+    for test_config in testing_configs:
 
-print("****** EVALUATION FINISHED *******")
+        print('Evaluating on:', test_config)
+        
+        #If test_config is the same as what was trained on, just skip
+        if test_config == train_config:
+            continue
 
-#Save model 
-basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
+        sparse_env = PlarkEnvSparse(config_file_path=test_config, driving_agent='panther', \
+                                    image_based=False)
 
-basepath = '/data/agents/models'
-exp_name = 'test_' + basicdate
-exp_path = os.path.join(basepath, exp_name)
+        sparse_env = Monitor(sparse_env, log_dir)
 
-#print(exp_path)
+        if normalize:
+            sparse_env = DummyVecEnv([lambda: sparse_env])
+            sparse_env = VecNormalize(sparse_env, norm_obs=True, norm_reward=False, \
+                                      clip_obs=200., gamma=0.95) 
 
-env.get_attr('driving_agent')
+        mean_reward, n_steps = evaluate_policy(model, sparse_env, \
+                                               n_eval_episodes=n_eval_episodes, \
+                                               deterministic=False, render=False, \
+                                               callback=None, reward_threshold=None, \
+                                               return_episode_rewards=False)
+        print("Mean reward: ", mean_reward)
 
-modeltype = 'PPO2'
-modelplayer = env.get_attr('driving_agent')[0] #env.driving_agent 
-render_height = env.get_attr('render_height')[0] #env.render_height
-render_width =  env.get_attr('render_width')[0] #env.render_width
-image_based = False
-helper.save_model(exp_path,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate)
+        #Save model 
+        '''
+        basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
 
-# # making the video
+        basepath = '/data/agents/models'
+        exp_name = 'test_' + basicdate
+        exp_path = os.path.join(basepath, exp_name)
 
-video_path = '/test.mp4'
-basewidth,hsize = helper.make_video(model,env,video_path)
+        env.get_attr('driving_agent')
 
-video = io.open(video_path, 'r+b').read()
-encoded = base64.b64encode(video)
-HTML(data='''<video alt="test" width="'''+str(basewidth)+'''" height="'''+str(hsize)+'''" controls>
-                <source src="data:video/mp4;base64,{0}" type="video/mp4" />
-             </video>'''.format(encoded.decode('ascii')))
+        modeltype = 'PPO2'
+        modelplayer = env.get_attr('driving_agent')[0] #env.driving_agent 
+        render_height = env.get_attr('render_height')[0] #env.render_height
+        render_width =  env.get_attr('render_width')[0] #env.render_width
+        image_based = False
+        helper.save_model(exp_path,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate)
+        '''
 
+#Making the video
+
+#video_path = '/test.mp4'
+#basewidth,hsize = helper.make_video(model,env,video_path)
+
+#video = io.open(video_path, 'r+b').read()
+#encoded = base64.b64encode(video)
