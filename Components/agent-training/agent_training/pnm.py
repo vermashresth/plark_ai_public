@@ -23,7 +23,7 @@ def compute_payoff_matrix(driving_agent,
                           env,
                           players,
                           opponents,
-                          trials = 1):
+                          trials = 1000):
 
     payoffs = np.pad(payoffs, [(0, len(players) - payoffs.shape[0]), (0, len(opponents) - payoffs.shape[1])], mode='constant')
     # Adding payoff for the last row player
@@ -273,24 +273,45 @@ def run_pnm(exp_name,
                                                 save_model = keep_instances)
     panther_training_steps = panther_training_steps + steps
 
-    # Initialize the mixture of opponents
+    # Initialize the payoffs and sets
+    payoffs = np.zeros((1,1))
     pelicans = []
     panthers = []
-    if keep_instances:
-        pelicans.append(pelican_model)
-        panthers.append(panther_model)
-    else:
-        pelicans.append(pelican_agent_filepath)
-        panthers.append(panther_agent_filepath)
-
-    mixture_pelicans = np.array([1.])
-    mixture_panthers = np.array([1.])
-    payoffs = np.zeros((1,1))
 
     # Train agent vs agent
     logger.info('Parallel Nash Memory (PNM)')
     for i in range(pnm_iterations):
         logger.info('PNM iteration ' + str(i) + ' of ' + str(pnm_iterations))
+
+        if keep_instances:
+            pelicans.append(pelican_model)
+            panthers.append(panther_model)
+        else:
+            pelicans.append(pelican_agent_filepath)
+            panthers.append(panther_agent_filepath)
+
+        # Computing the payoff matrices and solving the corresponding LPs
+        # Only compute for pelican in the sparse env, that of panther is the negative traspose (game is zero-sum)
+        logger.info('Computing payoffs and mixtures')
+        payoffs = compute_payoff_matrix('pelican',
+                                        keep_instances,
+                                        model_type,
+                                        policy,
+                                        payoffs,
+                                        pelican_test_env,
+                                        pelicans,
+                                        panthers)
+        logger.info(payoffs)
+        np.save('%s/payoffs_%d.npy' % (log_dir_base, i), payoffs)
+        (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
+        mixture_pelicans /= np.sum(mixture_pelicans)
+        logger.info(mixture_pelicans)
+        np.save('%s/mixture1_%d.npy' % (log_dir_base, i), mixture_pelicans)
+        (mixture_panthers, value_panthers) = lp_solve.solve_zero_sum_game(-payoffs.transpose())
+        mixture_panthers /= np.sum(mixture_panthers)
+        logger.info(mixture_panthers)
+        np.save('%s/mixture2_%d.npy' % (log_dir_base, i), mixture_panthers)
+
         logger.info('Training pelican')
         pelican_model = helper.make_new_model(model_type, policy, pelican_env)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
@@ -331,34 +352,6 @@ def run_pnm(exp_name,
                                                                     previous_steps = panther_training_steps)
         panther_training_steps = panther_training_steps + steps
 
-        if keep_instances:
-            pelicans.append(pelican_model)
-            panthers.append(panther_model)
-        else:
-            pelicans.append(pelican_agent_filepath)
-            panthers.append(panther_agent_filepath)
-
-        # Computing the payoff matrices and solving the corresponding LPs
-        # Only compute for pelican in the sparse env, that of panther is the negative traspose (game is zero-sum)
-        payoffs = compute_payoff_matrix('pelican',
-                                        keep_instances,
-                                        model_type,
-                                        policy,
-                                        payoffs,
-                                        pelican_test_env,
-                                        pelicans,
-                                        panthers)
-        logger.info(payoffs)
-        np.save('%s/payoffs_%d.npy' % (log_dir_base, i), payoffs)
-        mixture_pelicans = lp_solve.solve_zero_sum_game(payoffs)
-        mixture_pelicans /= np.sum(mixture_pelicans)
-        logger.info(mixture_pelicans)
-        np.save('%s/mixture1_%d.npy' % (log_dir_base, i), mixture_pelicans)        
-        mixture_panthers = lp_solve.solve_zero_sum_game(-payoffs.transpose())
-        mixture_panthers /= np.sum(mixture_panthers)
-        logger.info(mixture_panthers)
-        np.save('%s/mixture2_%d.npy' % (log_dir_base, i), mixture_panthers)                
-
     # Saving final version of the agents
     agent_filepath ,_, _= helper.save_model_with_env_settings(exp_path, pelican_model, pelican_model_type, pelican_env, basicdate)
     agent_filepath ,_, _= helper.save_model_with_env_settings(exp_path, panther_model, panther_model_type, panther_env, basicdate)
@@ -369,7 +362,6 @@ def run_pnm(exp_name,
     video_path =  os.path.join(exp_path, 'test_pnm.mp4')
     basewidth,hsize = helper.make_video(pelican_model, pelican_env, video_path)
     return video_path, basewidth, hsize
-
 
 def main():
     basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
@@ -383,11 +375,11 @@ def main():
     run_pnm(exp_name,
                  exp_path,
                  basicdate,
-                  pelican_testing_interval = 25,
-                  pelican_max_learning_steps = 25,
-                  panther_testing_interval = 25,
-                  panther_max_learning_steps = 25,
-                  pnm_iterations = 20,
+                  pelican_testing_interval = 1000,
+                  pelican_max_learning_steps = 50000,
+                  panther_testing_interval = 1000,
+                  panther_max_learning_steps = 50000,
+                  pnm_iterations = 200,
                   model_type = 'PPO2',
                   log_to_tb = True,
                   image_based = False,
