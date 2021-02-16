@@ -1,3 +1,7 @@
+# secrets
+.secrets
+
+
 data/**
 !data/agents
 data/agents/**
