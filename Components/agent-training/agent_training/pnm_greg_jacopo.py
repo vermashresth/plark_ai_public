@@ -15,9 +15,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Needs libgmp3-dev. Have added it to the dockerfile, so new-builds should be fine.
-# !pip install pycddlib
-
 def compute_payoff_matrix(pelican,
                           panther,
                           payoffs,
@@ -82,12 +79,14 @@ def train_agent_against_mixture(driving_agent,
     else:
         
         opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
+        
         for opponent in opponents:
+            # Add something to load a batch of envs and sample them randomly
             env = helper.get_envs(driving_agent, config_file_path, [opponent], 1) 
             agent_filepath, new_steps = train_agent(exp_path,
                                                 model,
                                                 env,
-                                                max_steps,
+                                                testing_interval,
                                                 testing_interval,
                                                 model_type,
                                                 basicdate,
@@ -335,7 +334,7 @@ def main():
             model_type = 'PPO2',
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 1)    
+            num_parallel_envs = 10)    
 
 if __name__ == '__main__':
     main()

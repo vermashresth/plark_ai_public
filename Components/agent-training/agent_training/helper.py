@@ -178,7 +178,8 @@ def get_envs(driving_agent,
              random_panther_start_position=True,
              max_illegal_moves_per_turn=3,
              sparse=False,
-             vecenv=True):
+             vecenv=True,
+             mixture=None):
 
     params = dict(driving_agent = driving_agent,
                   config_file_path = config_file_path,
