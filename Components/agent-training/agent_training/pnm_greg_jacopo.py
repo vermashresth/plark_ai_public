@@ -1,3 +1,4 @@
+# !pip install pycddlib
 import datetime
 import numpy as np
 import os
@@ -351,3 +352,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
