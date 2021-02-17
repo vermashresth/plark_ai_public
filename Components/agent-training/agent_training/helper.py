@@ -197,7 +197,7 @@ def get_envs(driving_agent,
         return SubprocVecEnv([lambda:get_env(**params) for _ in range(num_envs)])
     elif len(opponents) >= 2:
         opponents = np.random.choice(opponents, size = num_envs, p = mixture)
-        return SubprocVecEnv([lambda:get_env(**params).update(opponent=opponent) for opponent in opponents])
+        return SubprocVecEnv([lambda:get_env(**params.update(opponent=opponent)) for opponent in opponents])
 
 # Save model base on env
 def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
