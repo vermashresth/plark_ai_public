@@ -2,6 +2,7 @@
 import datetime
 import numpy as np
 import os
+import copy
 from stable_baselines.common.vec_env import SubprocVecEnv
 from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 from gym_plark.envs.plark_env import PlarkEnv
@@ -22,24 +23,39 @@ def compute_payoff_matrix(pelican,
                           panthers,
                           config_file_path,
                           trials = 1000,
+                          parallel = False,
                           image_based = False,
                           num_parallel_envs = 1):
-
+    # Resizing the payoff matrix for new strategies
     payoffs = np.pad(payoffs, 
                      [(0, len(pelicans) - payoffs.shape[0]), 
                       (0, len(panthers) - payoffs.shape[1])], 
                      mode = 'constant')
 
-    # Adding payoff for the last row player        
+    # Adding payoff for the last row strategy       
     for i, opponent in enumerate(panthers):        
-        env = helper.get_envs('pelican', config_file_path, [opponent], num_parallel_envs, sparse=True)                
-        victory_count, avg_reward = helper.check_victory(pelican, env, trials = trials)
+        env = helper.get_envs('pelican', config_file_path,
+                              opponents = [opponent],
+                              num_envs = num_parallel_envs,
+                              image_based = image_based,
+                              random_panther_start_position = True,
+                              max_illegal_moves_per_turn = 3,
+                              sparse = True,
+                              vecenv = parallel)                
+        victory_count, avg_reward = helper.check_victory(pelican, env, trials = trials // num_parallel_envs)
         payoffs[-1, i] = avg_reward
 
-    # Adding payoff for the last column player
+    # Adding payoff for the last column strategy
     for i, opponent in enumerate(pelicans):
-        env = helper.get_envs('panther', config_file_path, [opponent], num_parallel_envs, sparse=True) 
-        victory_count, avg_reward = helper.check_victory(panther, env, trials = trials)
+        env = helper.get_envs('panther', config_file_path,
+                              opponents = [opponent],
+                              num_envs = num_parallel_envs,
+                              image_based = image_based,
+                              random_panther_start_position = True,
+                              max_illegal_moves_per_turn = 3,
+                              sparse = True,
+                              vecenv = parallel) 
+        victory_count, avg_reward = helper.check_victory(panther, env, trials = trials // num_parallel_envs)
         # Given that we are storing everything in one table, and the value below is now computed 
         # from the perspective of the panther, I assume we need this value to be negative?
         payoffs[i, -1] = -avg_reward        
@@ -60,11 +76,21 @@ def train_agent_against_mixture(driving_agent,
                                 config_file_path,                                
                                 early_stopping = True,
                                 previous_steps = 0,
+                                parallel = False,
                                 image_based = False,
                                 num_parallel_envs = 1):       
-        
-    if num_parallel_envs > 1:
-        env = helper.get_envs(driving_agent, config_file_path, tests, num_parallel_envs, mixture=mixture) 
+    # If we use parallel envs, we run all the training against different sampled opponents in parallel
+    if parallel:
+        env = helper.get_envs(driving_agent,
+                              config_file_path,
+                              opponents = tests,
+                              num_envs = num_parallel_envs,
+                              image_based = image_based,
+                              random_panther_start_position = True,
+                              max_illegal_moves_per_turn = 3,
+                              sparse = False,
+                              vecenv = parallel,
+                              mixture = mixture) 
         agent_filepath, new_steps = train_agent(exp_path,
                                                 model,
                                                 env,
@@ -76,24 +102,30 @@ def train_agent_against_mixture(driving_agent,
                                                 tb_log_name,
                                                 early_stopping = True,
                                                 previous_steps = previous_steps)
+    # Otherwise we sample different opponents and we train against each of them separately
     else:
-        
         opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
-        
         for opponent in opponents:
-            # Add something to load a batch of envs and sample them randomly
-            env = helper.get_envs(driving_agent, config_file_path, [opponent], 1) 
+            env = helper.get_envs(driving_agent,
+                                  config_file_path,
+                                  opponents = [opponent],
+                                  num_envs = num_parallel_envs,
+                                  image_based = image_based,
+                                  random_panther_start_position = True,
+                                  max_illegal_moves_per_turn = 3,
+                                  sparse = False,
+                                  vecenv = parallel) 
             agent_filepath, new_steps = train_agent(exp_path,
-                                                model,
-                                                env,
-                                                testing_interval,
-                                                testing_interval,
-                                                model_type,
-                                                basicdate,
-                                                tb_writer,
-                                                tb_log_name,
-                                                early_stopping = True,
-                                                previous_steps = previous_steps)    
+                                                    model,
+                                                    env,
+                                                    testing_interval,
+                                                    testing_interval,
+                                                    model_type,
+                                                    basicdate,
+                                                    tb_writer,
+                                                    tb_log_name,
+                                                    early_stopping = True,
+                                                    previous_steps = previous_steps)    
     return agent_filepath, new_steps
 
 def train_agent(exp_path,
@@ -140,6 +172,7 @@ def run_pnm(exp_path,
             panther_max_learning_steps = 10000,
             max_pnm_iterations = 10000,
             stopping_eps = 0.001,
+            retraining_prob = 0.,
             model_type = 'PPO2',
             log_to_tb = False,
             image_based = True,
@@ -177,11 +210,16 @@ def run_pnm(exp_path,
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json'
 
     # Train initial pelican vs default panther
-    
-    pelican_env = helper.get_envs('pelican', config_file_path, num_envs=num_parallel_envs) 
+    pelican_env = helper.get_envs('pelican',
+                                  config_file_path,
+                                  num_envs = num_parallel_envs
+                                  image_based = image_based,
+                                  random_panther_start_position = True,
+                                  max_illegal_moves_per_turn = 3,
+                                  sparse = False,
+                                  vecenv = parallel) 
     pelican_model = helper.make_new_model(model_type, policy, pelican_env)
     logger.info('Training initial pelican')
-        
     pelican_agent_filepath, steps = train_agent(pelicans_tmp_exp_path,
                                                 pelican_model,
                                                 pelican_env,
@@ -196,7 +234,14 @@ def run_pnm(exp_path,
     pelican_training_steps = pelican_training_steps + steps
 
     # Train initial panther agent vs default pelican
-    panther_env = helper.get_envs('panther', config_file_path, num_envs=num_parallel_envs)
+    panther_env = helper.get_envs('panther',
+                                  config_file_path,
+                                  num_envs = num_parallel_envs
+                                  image_based = image_based,
+                                  random_panther_start_position = True,
+                                  max_illegal_moves_per_turn = 3,
+                                  sparse = False,
+                                  vecenv = parallel)
     panther_model = helper.make_new_model(model_type, policy, panther_env)
     logger.info('Training initial panther')
     panther_agent_filepath, steps = train_agent(panthers_tmp_exp_path,
@@ -216,12 +261,11 @@ def run_pnm(exp_path,
     payoffs = np.zeros((1, 1))
     pelicans = []
     panthers = []
-    
-    # Train agent vs agent
+
+    # Train best responses until Nash equilibrium is found or max_iterations are reached
     logger.info('Parallel Nash Memory (PNM)')
     for i in range(max_pnm_iterations):
         logger.info('PNM iteration ' + str(i) + ' of ' + str(max_pnm_iterations))
-
         pelicans.append(pelican_agent_filepath)
         panthers.append(panther_agent_filepath)
 
@@ -235,27 +279,34 @@ def run_pnm(exp_path,
                                         panthers,
                                         config_file_path,
                                         trials = 100,
+                                        parallel = parallel,
                                         image_based = image_based,
                                         num_parallel_envs = num_parallel_envs)
         logger.info(payoffs)
         np.save('%s/payoffs_%d.npy' % (pnm_logs_exp_path, i), payoffs)
         (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
         mixture_pelicans /= np.sum(mixture_pelicans)
-        br_value_pelican = np.dot(mixture_pelicans, payoffs[-1])
         logger.info(mixture_pelicans)
         np.save('%s/mixture_pelicans_%d.npy' % (pnm_logs_exp_path, i), mixture_pelicans)
         (mixture_panthers, value_panthers) = lp_solve.solve_zero_sum_game(-payoffs.transpose())
         mixture_panthers /= np.sum(mixture_panthers)
-        br_value_panther = np.dot(mixture_panthers, -payoffs[:,-1])
         logger.info(mixture_panthers)
-        # Check if we found a stable NE, in that case we are done
         np.save('%s/mixture_panthers_%d.npy' % (pnm_logs_exp_path, i), mixture_panthers)
+
+        # Check if we found a stable NE, in that case we are done
+        br_value_pelican = np.dot(mixture_pelicans, payoffs[-1])
+        br_value_panther = np.dot(mixture_panthers, -payoffs[:, -1])
         if i > 0 and abs(br_value_pelican - value_pelicans) < stopping_eps and abs(br_value_panther - value_panthers) < stopping_eps:
             print('Stable Nash Equilibrium found')
             break
 
+        # Train from skratch or retrain an existing model for pelican
         logger.info('Training pelican')
-        pelican_model = helper.make_new_model(model_type, policy, pelican_env)
+        if np.random.rand(1) < retraining_prob:
+            idx = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
+            pelican_model = helper.loadAgent(pelicans[idx], pelican_model_type)
+        else:
+            pelican_model = helper.make_new_model(model_type, policy, pelican_env)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
                                                                     policy,
                                                                     pelicans_tmp_exp_path,
@@ -270,12 +321,18 @@ def run_pnm(exp_path,
                                                                     pelican_tb_log_name,
                                                                     config_file_path,
                                                                     previous_steps = pelican_training_steps,
+                                                                    parallel = parallel,
                                                                     image_based = image_based,
                                                                     num_parallel_envs = num_parallel_envs)
         pelican_training_steps = pelican_training_steps + steps
 
+        # Train from skratch or retrain an existing model for panther
         logger.info('Training panther')
-        panther_model = helper.make_new_model(model_type, policy, panther_env)
+        if np.random.rand(1) < retraining_prob:
+            idx = np.random.choice(panthers, 1, p = mixture_panthers)[0]
+            panther_model = helper.loadAgent(panthers[idx], panther_model_type)
+        else:
+            panther_model = helper.make_new_model(model_type, policy, panther_env)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
                                                                     policy,
                                                                     panthers_tmp_exp_path,
@@ -290,6 +347,7 @@ def run_pnm(exp_path,
                                                                     panther_tb_log_name,
                                                                     config_file_path,
                                                                     previous_steps = panther_training_steps,
+                                                                    parallel = parallel,
                                                                     image_based = image_based,
                                                                     num_parallel_envs = num_parallel_envs)
         panther_training_steps = panther_training_steps + steps
@@ -322,7 +380,6 @@ def main():
     exp_path = os.path.join(basepath, exp_name)
     logger.info(exp_path)
 
-    # run_pnm(exp_path,basicdate)
     run_pnm(exp_path,
             basicdate,
             pelican_testing_interval = 250,
@@ -331,6 +388,7 @@ def main():
             panther_max_learning_steps = 250,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
+            retraining_prob = 0.5,
             model_type = 'PPO2',
             log_to_tb = True,
             image_based = False,
@@ -338,5 +396,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
