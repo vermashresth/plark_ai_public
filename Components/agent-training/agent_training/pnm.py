@@ -6,7 +6,7 @@ from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 from gym_plark.envs.plark_env import PlarkEnv
 from tensorboardX import SummaryWriter
 import helper
-import shutil
+#import shutil
 import lp_solve
 import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -241,7 +241,7 @@ def run_pnm(exp_path,
                                                 pelican_tb_log_name,
                                                 early_stopping = True,
                                                 previous_steps = 0,
-                                                save_model = keep_instances)
+                                                save_model = not keep_instances)
     pelican_training_steps = pelican_training_steps + steps
 
     # Train initial panther agent vs default pelican
@@ -271,11 +271,11 @@ def run_pnm(exp_path,
                                                 panther_tb_log_name,
                                                 early_stopping = True,
                                                 previous_steps = 0,
-                                                save_model = keep_instances)
+                                                save_model = not keep_instances)
     panther_training_steps = panther_training_steps + steps
 
     # Initialize the payoffs and sets
-    payoffs = np.zeros((1,1))
+    payoffs = np.zeros((1, 1))
     pelicans = []
     panthers = []
 
@@ -373,15 +373,15 @@ def run_pnm(exp_path,
         pelican_model = pelicans[i]
         if not keep_instances:
             pelican_model = helper.loadAgent(pelican_model, pelican_model_type)
-        agent_filepath ,_, _= helper.save_model_with_env_settings(exp_path, pelican_model, pelican_model_type, pelican_env, basicdate + "_ps_" + str(i))
+        agent_filepath ,_, _= helper.save_model_with_env_settings(pelicans_tmp_exp_path, pelican_model, pelican_model_type, pelican_env, basicdate + "_ps_" + str(i))
     support_panthers = np.nonzero(mixture_panthers)[0]
     mixture_panthers = mixture_panthers[support_panthers]
     np.save(exp_path + '/mixture_panthers.npy', mixture_panthers)    
     for i, idx in enumerate(mixture_panthers):
-        panthers_model = panthers[i]
+        panther_model = panthers[i]
         if not keep_instances:
-            panthers_model = helper.loadAgent(panthers_model, panther_model_type)
-        agent_filepath ,_, _= helper.save_model_with_env_settings(exp_path, panther_model, panther_model_type, panther_env, basicdate + "_ps_" + str(i))
+            panther_model = helper.loadAgent(panther_model, panther_model_type)
+        agent_filepath ,_, _= helper.save_model_with_env_settings(panthers_tmp_exp_path, panther_model, panther_model_type, panther_env, basicdate + "_ps_" + str(i))
     # Removing temp folders, if needed
     #shutil.rmtree(pelicans_tmp_exp_path)
     #shutil.rmtree(panthers_tmp_exp_path)
