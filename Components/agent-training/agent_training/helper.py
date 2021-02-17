@@ -8,7 +8,9 @@ import PIL.Image
 import numpy as np
 from plark_game import classes
 from gym_plark.envs import plark_env
-
+from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
+from gym_plark.envs.plark_env import PlarkEnv
+from stable_baselines.common.vec_env import SubprocVecEnv
 from stable_baselines.common.env_checker import check_env
 from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
@@ -141,6 +143,61 @@ def evaluate_policy(model, env, n_eval_episodes=4, deterministic=True, render=Fa
     if return_episode_rewards:
         return episode_rewards, episode_lengths, victories
     return mean_reward, std_reward, victories
+
+
+def get_env(driving_agent, 
+            config_file_path, 
+            opponent=None, 
+            image_based=False, 
+            random_panther_start_position=True,
+            max_illegal_moves_per_turn = 3,
+            sparse=False):
+
+    params = dict(driving_agent = driving_agent,
+                  config_file_path = config_file_path,
+                  image_based = image_based,
+                  random_panther_start_position = random_panther_start_position,
+                  max_illegal_moves_per_turn = max_illegal_moves_per_turn)
+    
+    if opponent != None and driving_agent == 'pelican':
+        params.update(panther_agent_filepath = opponent)
+    elif opponent != None and driving_agent == 'panther':
+        params.update(pelican_agent_filepath = opponent)
+
+    if sparse:
+        return PlarkEnvSparse(**params)
+    else:
+        return PlarkEnv(**params)
+           
+           
+
+def get_envs(driving_agent, 
+             config_file_path, 
+             opponents=[], 
+             num_envs=1,
+             image_based=False, 
+             random_panther_start_position=True,
+             max_illegal_moves_per_turn=3,
+             sparse=False,
+             vecenv=True):
+
+    params = dict(driving_agent = driving_agent,
+                  config_file_path = config_file_path,
+                  image_based = image_based,
+                  random_panther_start_position = random_panther_start_position,
+                  max_illegal_moves_per_turn = max_illegal_moves_per_turn,
+                  sparse = sparse)
+
+    if len(opponents) == 1:
+        params.update(oppoent=opponents[0])
+
+    if vecenv == False:
+        return get_env(**params)
+    elif len(opponents) < 2:
+        return SubprocVecEnv([lambda:get_env(**params) for _ in range(num_envs)])
+    elif len(opponents) >= 2:
+        opponents = np.random.choice(opponents, size = num_envs, p = mixture)
+        return SubprocVecEnv([lambda:get_env(**params).update(opponent=opponent) for opponent in opponents])
 
 # Save model base on env
 def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
@@ -295,8 +352,8 @@ def og_load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name,
 
                 with open(metadata_filepath) as f:
                     metadata = json.load(f)
-                logger.info('Playing against:'+agent_filepath)	
-                if metadata['agentplayer'] == 'pelican':	
+                logger.info('Playing against:'+agent_filepath)  
+                if metadata['agentplayer'] == 'pelican':        
                     pelican_agent = classes.Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'])
                     pelican_model = pelican_agent.model
 
