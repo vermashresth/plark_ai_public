@@ -64,7 +64,7 @@ def train_agent_against_mixture(driving_agent,
                                 num_parallel_envs = 1):       
         
     if num_parallel_envs > 1:
-        env = helper.get_envs(driving_agent, config_file_path, tests, num_parallel_envs) 
+        env = helper.get_envs(driving_agent, config_file_path, tests, num_parallel_envs, mixture=mixture) 
         agent_filepath, new_steps = train_agent(exp_path,
                                                 model,
                                                 env,
