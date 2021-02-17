@@ -163,12 +163,11 @@ def get_env(driving_agent,
         params.update(panther_agent_filepath = opponent)
     elif opponent != None and driving_agent == 'panther':
         params.update(pelican_agent_filepath = opponent)
-
     if sparse:
         return PlarkEnvSparse(**params)
     else:
         return PlarkEnv(**params)
-           
+
            
 
 def get_envs(driving_agent, 
@@ -189,7 +188,7 @@ def get_envs(driving_agent,
                   sparse = sparse)
 
     if len(opponents) == 1:
-        params.update(oppoent=opponents[0])
+        params.update(opponent=opponents[0])
 
     if vecenv == False:
         return get_env(**params)
@@ -254,7 +253,7 @@ def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_heigh
 
     logger.info('json saved to: '+json_path)
 
-    
+
 ## Custom Model Evaluation Method for evaluating Plark games. 
 ## Does require changes to how data is passed back from environments. 
 ## Instead of using return ob, reward, done, {} use eturn ob, reward, done, {game.state}
@@ -425,7 +424,7 @@ def make_video(model,env,video_file_path,n_steps = 10000,fps=10,deterministic=Fa
             break
     writer.close()  
     return basewidth,hsize      
-    
+
 def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps = 10000,fps=10,deterministic=False,basewidth = 512,verbose =False):
     # Test the trained agent
     # This is when you have a plark game agent and a plark game 
