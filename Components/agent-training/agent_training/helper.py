@@ -144,7 +144,6 @@ def evaluate_policy(model, env, n_eval_episodes=4, deterministic=True, render=Fa
         return episode_rewards, episode_lengths, victories
     return mean_reward, std_reward, victories
 
-
 def get_env(driving_agent, 
             config_file_path, 
             opponent=None, 
@@ -167,8 +166,6 @@ def get_env(driving_agent,
         return PlarkEnvSparse(**params)
     else:
         return PlarkEnv(**params)
-
-           
 
 def get_envs(driving_agent, 
              config_file_path, 
