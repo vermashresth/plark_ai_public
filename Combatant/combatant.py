@@ -129,12 +129,12 @@ class Combatant:
 
 
 AGENTS_PATH = os.path.join(
-    "/Users/nbarlow/plark_ai_public", "data", "agents", "models", "latest"
+    "/plark_ai_public", "data", "agents", "models", "latest"
 )
 
 BASIC_AGENTS_PATH = os.path.normpath(
     os.path.join(
-        "/Users/nbarlow/plark_ai_public",
+        "/plark_ai_public",
         "Components",
         "plark-game",
         "plark_game",
