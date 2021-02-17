@@ -14,6 +14,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+# Needs libgmp3-dev. Have added it to the dockerfile, so new-builds should be fine.
+# !pip install pycddlib
 
 def compute_payoff_matrix(pelican,
                           panther,
@@ -31,24 +33,14 @@ def compute_payoff_matrix(pelican,
                      mode = 'constant')
 
     # Adding payoff for the last row player        
-    for i, opponent in enumerate(panthers):
-        env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent = 'pelican',
-                                                   panther_agent_filepath = opponent,
-                                                   config_file_path = config_file_path,
-                                                   image_based = image_based,
-                                                   random_panther_start_position = True,
-                                                   max_illegal_moves_per_turn = 3) for _ in range(num_parallel_envs)])            
+    for i, opponent in enumerate(panthers):        
+        env = helper.get_envs('pelican', config_file_path, [opponent], num_parallel_envs, sparse=True)                
         victory_count, avg_reward = helper.check_victory(pelican, env, trials = trials)
         payoffs[-1, i] = avg_reward
 
     # Adding payoff for the last column player
     for i, opponent in enumerate(pelicans):
-        env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent = 'panther',
-                                                   panther_agent_filepath = opponent,
-                                                   config_file_path = config_file_path,
-                                                   image_based = image_based,
-                                                   random_panther_start_position = True,
-                                                   max_illegal_moves_per_turn = 3) for _ in range(num_parallel_envs)])            
+        env = helper.get_envs('panther', config_file_path, [opponent], num_parallel_envs, sparse=True) 
         victory_count, avg_reward = helper.check_victory(panther, env, trials = trials)
         # Given that we are storing everything in one table, and the value below is now computed 
         # from the perspective of the panther, I assume we need this value to be negative?
@@ -73,34 +65,35 @@ def train_agent_against_mixture(driving_agent,
                                 image_based = False,
                                 num_parallel_envs = 1):       
         
-    opponents = np.random.choice(tests, size = num_parallel_envs, p = mixture)    
-                
-    if driving_agent == 'pelican':            
-        env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent = driving_agent,
-                                                   panther_agent_filepath = opponent_model,
-                                                   config_file_path = config_file_path,
-                                                   image_based = image_based,
-                                                   random_panther_start_position = True,
-                                                   max_illegal_moves_per_turn = 3) for opponent_model in opponents])            
+    if num_parallel_envs > 1:
+        env = helper.get_envs(driving_agent, config_file_path, tests, num_parallel_envs) 
+        agent_filepath, new_steps = train_agent(exp_path,
+                                                model,
+                                                env,
+                                                max_steps,
+                                                testing_interval,
+                                                model_type,
+                                                basicdate,
+                                                tb_writer,
+                                                tb_log_name,
+                                                early_stopping = True,
+                                                previous_steps = previous_steps)
     else:
-        env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent = driving_agent,
-                                                   pelican_agent_filepath = opponent_model,
-                                                   config_file_path = config_file_path,
-                                                   image_based = image_based,
-                                                   random_panther_start_position = True,
-                                                   max_illegal_moves_per_turn = 3) for opponent_model in opponents])            
         
-    agent_filepath, new_steps = train_agent(exp_path,
-                                            model,
-                                            env,
-                                            max_steps / num_parallel_envs,
-                                            testing_interval,
-                                            model_type,
-                                            basicdate,
-                                            tb_writer,
-                                            tb_log_name,
-                                            early_stopping = True,
-                                            previous_steps = previous_steps)
+        opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
+        for opponent in opponents:
+            env = helper.get_envs(driving_agent, config_file_path, [opponent], 1) 
+            agent_filepath, new_steps = train_agent(exp_path,
+                                                model,
+                                                env,
+                                                max_steps,
+                                                testing_interval,
+                                                model_type,
+                                                basicdate,
+                                                tb_writer,
+                                                tb_log_name,
+                                                early_stopping = True,
+                                                previous_steps = previous_steps)    
     return agent_filepath, new_steps
 
 def train_agent(exp_path,
@@ -183,19 +176,8 @@ def run_pnm(exp_path,
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json'
 
     # Train initial pelican vs default panther
-    if parallel:
-        pelican_env = SubprocVecEnv([lambda:PlarkEnv(driving_agent = 'pelican',
-                                                     config_file_path = config_file_path,
-                                                     image_based = image_based,
-                                                     random_panther_start_position = True,
-                                                     max_illegal_moves_per_turn = 3) for _ in range(num_parallel_envs)])
-    else:
-        pelican_env = PlarkEnv(driving_agent ='pelican',
-                               config_file_path = config_file_path,
-                               image_based = image_based,
-                               random_panther_start_position = True,
-                               max_illegal_moves_per_turn = 3)
-
+    
+    pelican_env = helper.get_envs('pelican', config_file_path, num_envs=num_parallel_envs) 
     pelican_model = helper.make_new_model(model_type, policy, pelican_env)
     logger.info('Training initial pelican')
         
@@ -213,19 +195,7 @@ def run_pnm(exp_path,
     pelican_training_steps = pelican_training_steps + steps
 
     # Train initial panther agent vs default pelican
-    if parallel:
-        panther_env = SubprocVecEnv([lambda:PlarkEnv(driving_agent = 'panther',
-                                                     config_file_path = config_file_path,
-                                                     image_based = image_based,
-                                                     random_panther_start_position = True,
-                                                     max_illegal_moves_per_turn = 3) for _ in range(num_parallel_envs)])
-    else:
-        panther_env = PlarkEnv(driving_agent = 'panther',
-                               config_file_path = config_file_path,
-                               image_based = image_based,
-                               random_panther_start_position = True,
-                               max_illegal_moves_per_turn = 3)
-
+    panther_env = helper.get_envs('panther', config_file_path, num_envs=num_parallel_envs)
     panther_model = helper.make_new_model(model_type, policy, panther_env)
     logger.info('Training initial panther')
     panther_agent_filepath, steps = train_agent(panther_tmp_exp_path,
@@ -263,7 +233,7 @@ def run_pnm(exp_path,
                                         pelicans,
                                         panthers,
                                         config_file_path,
-                                        trials = 1000,
+                                        trials = 100,
                                         image_based = image_based,
                                         num_parallel_envs = num_parallel_envs)      
 
@@ -351,3 +321,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
