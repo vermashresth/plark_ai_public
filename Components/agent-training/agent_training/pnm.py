@@ -8,7 +8,6 @@ from tensorboardX import SummaryWriter
 import helper
 import lp_solve
 import tensorflow as tf
-from stable_baselines import DQN, PPO2, A2C, ACKTR
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 import logging
@@ -312,15 +311,7 @@ def run_pnm(exp_path,
         logger.info('Training pelican')
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
-            #pelican_model = helper.loadAgent(path, pelican_model_type)
-            if pelican_model_type.lower() == 'dqn':
-                pelican_model = DQN.load(path)
-            elif pelican_model_type.lower() == 'ppo2':
-                pelican_model = PPO2.load(path)
-            elif pelican_model_type.lower() == 'a2c':
-                pelican_model = A2C.load(path)
-            elif pelican_model_type.lower() == 'acktr':
-                pelican_model = ACKTR.load(path)
+            pelican_model = helper.loadAgent(path, pelican_model_type)
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
@@ -346,15 +337,7 @@ def run_pnm(exp_path,
         logger.info('Training panther')
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
-            #panther_model = helper.loadAgent(path, panther_model_type)
-            if panther_model_type.lower() == 'dqn':
-                panther_model = DQN.load(path)
-            elif panther_model_type.lower() == 'ppo2':
-                panther_model = PPO2.load(path)
-            elif panther_model_type.lower() == 'a2c':
-                panther_model = A2C.load(path)
-            elif panther_model_type.lower() == 'acktr':
-                panther_model = ACKTR.load(path)
+            panther_model = helper.loadAgent(path, panther_model_type)
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
