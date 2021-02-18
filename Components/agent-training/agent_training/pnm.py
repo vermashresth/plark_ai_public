@@ -1,8 +1,10 @@
+# +
 # !pip install pycddlib
 import datetime
 import numpy as np
 import os
 import copy
+import glob
 from stable_baselines.common.vec_env import SubprocVecEnv
 from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 from gym_plark.envs.plark_env import PlarkEnv
@@ -10,11 +12,15 @@ from tensorboardX import SummaryWriter
 import helper
 import lp_solve
 import tensorflow as tf
+from stable_baselines import DQN, PPO2, A2C, ACKTR
+
 tf.logging.set_verbosity(tf.logging.ERROR)
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+# -
 
 def compute_payoff_matrix(pelican,
                           panther,
@@ -205,7 +211,7 @@ def run_pnm(exp_path,
     if model_type.lower() == 'ppo2':
         parallel = True
 
-    pnm_logs_exp_path = 'data/pnm_logs/test_' + basicdate
+    pnm_logs_exp_path = '/data/pnm_logs/test_' + basicdate
     os.makedirs(pnm_logs_exp_path, exist_ok = True)
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/balanced.json'
 
@@ -303,8 +309,21 @@ def run_pnm(exp_path,
         # Train from skratch or retrain an existing model for pelican
         logger.info('Training pelican')
         if np.random.rand(1) < retraining_prob:
-            idx = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
-            pelican_model = helper.loadAgent(pelicans[idx], pelican_model_type)
+            idx = np.random.choice(pelicans, 1, p = mixture_pelicans)[0] 
+            idx = glob.glob(idx+"/*.zip")[0]
+            print(idx)
+            #pelican_model = helper.loadAgent(pelicans[idx], pelican_model_type)
+            #pelican_model = helper.loadAgent(idx, pelican_model_type)
+            if pelican_model_type.lower() == 'dqn':
+                model = DQN.load(idx)            
+            elif pelican_model_type.lower() == 'ppo2':
+                model = PPO2.load(idx)
+            elif pelican_model_type.lower() == 'a2c':
+                model = A2C.load(idx)    
+            elif pelican_model_type.lower() == 'acktr':
+                model = ACKTR.load(idx)
+            
+            
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
@@ -329,8 +348,18 @@ def run_pnm(exp_path,
         # Train from skratch or retrain an existing model for panther
         logger.info('Training panther')
         if np.random.rand(1) < retraining_prob:
-            idx = np.random.choice(panthers, 1, p = mixture_panthers)[0]
-            panther_model = helper.loadAgent(panthers[idx], panther_model_type)
+            idx = np.random.choice(panthers, 1, p = mixture_panthers)[0]            
+            idx = glob.glob(idx+"/*.zip")[0]
+            #panther_model = helper.loadAgent(panthers[idx], panther_model_type)
+            #panther_model = helper.loadAgent(idx, panther_model_type)
+            if panther_model_type.lower() == 'dqn':
+                model = DQN.load(idx)            
+            elif panther_model_type.lower() == 'ppo2':
+                model = PPO2.load(idx)
+            elif panther_model_type.lower() == 'a2c':
+                model = A2C.load(idx)    
+            elif panther_model_type.lower() == 'acktr':
+                model = ACKTR.load(idx)            
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
@@ -375,7 +404,7 @@ def run_pnm(exp_path,
 
 def main():
     basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-    basepath = 'data/agents/models'
+    basepath = '/data/agents/models'
     exp_name = 'test_' + basicdate
     exp_path = os.path.join(basepath, exp_name)
     logger.info(exp_path)
@@ -388,7 +417,7 @@ def main():
             panther_max_learning_steps = 250,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
-            retraining_prob = 0.5,
+            retraining_prob = 1.0,
             model_type = 'PPO2',
             log_to_tb = True,
             image_based = False,
@@ -396,3 +425,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
