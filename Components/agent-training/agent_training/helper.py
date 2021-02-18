@@ -8,7 +8,9 @@ import PIL.Image
 import numpy as np
 from plark_game import classes
 from gym_plark.envs import plark_env
-
+from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
+from gym_plark.envs.plark_env import PlarkEnv
+from stable_baselines.common.vec_env import SubprocVecEnv
 from stable_baselines.common.env_checker import check_env
 from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
@@ -142,6 +144,58 @@ def evaluate_policy(model, env, n_eval_episodes=4, deterministic=True, render=Fa
         return episode_rewards, episode_lengths, victories
     return mean_reward, std_reward, victories
 
+def get_env(driving_agent, 
+            config_file_path, 
+            opponent=None, 
+            image_based=False, 
+            random_panther_start_position=True,
+            max_illegal_moves_per_turn = 3,
+            sparse=False):
+
+    params = dict(driving_agent = driving_agent,
+                  config_file_path = config_file_path,
+                  image_based = image_based,
+                  random_panther_start_position = random_panther_start_position,
+                  max_illegal_moves_per_turn = max_illegal_moves_per_turn)
+    
+    if opponent != None and driving_agent == 'pelican':
+        params.update(panther_agent_filepath = opponent)
+    elif opponent != None and driving_agent == 'panther':
+        params.update(pelican_agent_filepath = opponent)
+    if sparse:
+        return PlarkEnvSparse(**params)
+    else:
+        return PlarkEnv(**params)
+
+def get_envs(driving_agent, 
+             config_file_path, 
+             opponents=[], 
+             num_envs=1,
+             image_based=False, 
+             random_panther_start_position=True,
+             max_illegal_moves_per_turn=3,
+             sparse=False,
+             vecenv=True,
+             mixture=None):
+
+    params = dict(driving_agent = driving_agent,
+                  config_file_path = config_file_path,
+                  image_based = image_based,
+                  random_panther_start_position = random_panther_start_position,
+                  max_illegal_moves_per_turn = max_illegal_moves_per_turn,
+                  sparse = sparse)
+
+    if len(opponents) == 1:
+        params.update(opponent=opponents[0])
+
+    if vecenv == False:
+        return get_env(**params)
+    elif len(opponents) < 2:
+        return SubprocVecEnv([lambda:get_env(**params) for _ in range(num_envs)])
+    elif len(opponents) >= 2:
+        opponents = np.random.choice(opponents, size = num_envs, p = mixture)
+        return SubprocVecEnv([lambda:get_env(**params.update(opponent=opponent)) for opponent in opponents])
+
 # Save model base on env
 def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
     if basicdate is None:
@@ -197,7 +251,7 @@ def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_heigh
 
     logger.info('json saved to: '+json_path)
 
-    
+
 ## Custom Model Evaluation Method for evaluating Plark games. 
 ## Does require changes to how data is passed back from environments. 
 ## Instead of using return ob, reward, done, {} use eturn ob, reward, done, {game.state}
@@ -265,15 +319,16 @@ def custom_eval(model, env, n_eval_episodes=10, deterministic=True,
 def loadAgent(filepath, algorithm_type):
     try:
         if algorithm_type.lower() == 'dqn':
-            self.model = DQN.load(filepath)
+            model = DQN.load(filepath)
         elif algorithm_type.lower() == 'ppo2': 
-            self.model = PPO2.load(filepath)
+            model = PPO2.load(filepath)
         elif algorithm_type.lower() == 'a2c':
-            self.model = A2C.load(filepath)
+            model = A2C.load(filepath)
         elif algorithm_type.lower() == 'acktr':
-            self.model = ACKTR.load(filepath)
+            model = ACKTR.load(filepath)
+        return model
     except:
-        raise ValueError('Error loading panther agent. File : "' + filepath + '" does not exsist' )
+        raise ValueError('Error loading agent. File : "' + filepath + '" does not exsist' )
 
 def og_load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, panther_agent_filepath, panther_agent_name, config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',video_path='/Components/plark_ai_flask/builtangularSite/dist/assets/videos'):
     """
@@ -295,8 +350,8 @@ def og_load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name,
 
                 with open(metadata_filepath) as f:
                     metadata = json.load(f)
-                logger.info('Playing against:'+agent_filepath)	
-                if metadata['agentplayer'] == 'pelican':	
+                logger.info('Playing against:'+agent_filepath)  
+                if metadata['agentplayer'] == 'pelican':        
                     pelican_agent = classes.Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'])
                     pelican_model = pelican_agent.model
 
@@ -368,7 +423,7 @@ def make_video(model,env,video_file_path,n_steps = 10000,fps=10,deterministic=Fa
             break
     writer.close()  
     return basewidth,hsize      
-    
+
 def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps = 10000,fps=10,deterministic=False,basewidth = 512,verbose =False):
     # Test the trained agent
     # This is when you have a plark game agent and a plark game 
