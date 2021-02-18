@@ -312,14 +312,6 @@ def run_pnm(exp_path,
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
             pelican_model = helper.loadAgent(path, pelican_model_type)
-            #if pelican_model_type.lower() == 'dqn':
-            #    pelican_model = DQN.load(path)
-            #elif pelican_model_type.lower() == 'ppo2':
-            #    pelican_model = PPO2.load(path)
-            #elif pelican_model_type.lower() == 'a2c':
-            #    pelican_model = A2C.load(path)
-            #elif pelican_model_type.lower() == 'acktr':
-            #    pelican_model = ACKTR.load(path)
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
@@ -339,7 +331,6 @@ def run_pnm(exp_path,
                                                                     parallel = parallel,
                                                                     image_based = image_based,
                                                                     num_parallel_envs = num_parallel_envs)
-        del pelican_model
         pelican_training_steps = pelican_training_steps + steps
 
         # Train from skratch or retrain an existing model for panther
@@ -347,14 +338,6 @@ def run_pnm(exp_path,
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
             panther_model = helper.loadAgent(path, panther_model_type)
-            #if panther_model_type.lower() == 'dqn':
-            #    panther_model = DQN.load(path)
-            #elif panther_model_type.lower() == 'ppo2':
-            #    panther_model = PPO2.load(path)
-            #elif panther_model_type.lower() == 'a2c':
-            #    panther_model = A2C.load(path)
-            #elif panther_model_type.lower() == 'acktr':
-            #    panther_model = ACKTR.load(path)
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
@@ -374,13 +357,12 @@ def run_pnm(exp_path,
                                                                     parallel = parallel,
                                                                     image_based = image_based,
                                                                     num_parallel_envs = num_parallel_envs)
-        del panther_model
         panther_training_steps = panther_training_steps + steps
 
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))
     # Store DF for printing
-    df_path == os.path.join(exp_path, "values.csv")
+    df_path = os.path.join(exp_path, "values.csv")
     df.to_csv(df_path, index = False)
     # Make video
     video_path =  os.path.join(exp_path, 'test_pnm.mp4')
