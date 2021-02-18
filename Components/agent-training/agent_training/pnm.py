@@ -315,6 +315,7 @@ def run_pnm(exp_path,
         logger.info('Training pelican')
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
+            path = glob.glob(path+"/*.zip")[0]
             pelican_model = helper.loadAgent(path, pelican_model_type)
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env)
@@ -341,6 +342,7 @@ def run_pnm(exp_path,
         logger.info('Training panther')
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
+            path = glob.glob(path+"/*.zip")[0]
             panther_model = helper.loadAgent(path, panther_model_type)
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env)
