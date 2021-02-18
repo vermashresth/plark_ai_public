@@ -64,7 +64,7 @@ def compute_payoff_matrix(pelican,
         victory_count, avg_reward = helper.check_victory(panther, env, trials = trials // num_parallel_envs)
         # Given that we are storing everything in one table, and the value below is now computed 
         # from the perspective of the panther, I assume we need this value to be negative?
-        payoffs[i, -1] = -avg_reward        
+        payoffs[i, -1] = -avg_reward 
     return payoffs
 
 def train_agent_against_mixture(driving_agent,
@@ -108,6 +108,7 @@ def train_agent_against_mixture(driving_agent,
                                                 tb_log_name,
                                                 early_stopping = True,
                                                 previous_steps = previous_steps)
+        
     # Otherwise we sample different opponents and we train against each of them separately
     else:
         opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
@@ -131,7 +132,8 @@ def train_agent_against_mixture(driving_agent,
                                                     tb_writer,
                                                     tb_log_name,
                                                     early_stopping = True,
-                                                    previous_steps = previous_steps)    
+                                                    previous_steps = previous_steps)   
+           
     return agent_filepath, new_steps
 
 def train_agent(exp_path,
@@ -315,13 +317,13 @@ def run_pnm(exp_path,
             #pelican_model = helper.loadAgent(pelicans[idx], pelican_model_type)
             #pelican_model = helper.loadAgent(idx, pelican_model_type)
             if pelican_model_type.lower() == 'dqn':
-                model = DQN.load(idx)            
+                pelican_model = DQN.load(idx)            
             elif pelican_model_type.lower() == 'ppo2':
-                model = PPO2.load(idx)
+                pelican_model = PPO2.load(idx)
             elif pelican_model_type.lower() == 'a2c':
-                model = A2C.load(idx)    
+                pelican_model = A2C.load(idx)    
             elif pelican_model_type.lower() == 'acktr':
-                model = ACKTR.load(idx)
+                pelican_model = ACKTR.load(idx)
             
             
         else:
@@ -343,6 +345,7 @@ def run_pnm(exp_path,
                                                                     parallel = parallel,
                                                                     image_based = image_based,
                                                                     num_parallel_envs = num_parallel_envs)
+        del pelican_model
         pelican_training_steps = pelican_training_steps + steps
 
         # Train from skratch or retrain an existing model for panther
@@ -353,13 +356,13 @@ def run_pnm(exp_path,
             #panther_model = helper.loadAgent(panthers[idx], panther_model_type)
             #panther_model = helper.loadAgent(idx, panther_model_type)
             if panther_model_type.lower() == 'dqn':
-                model = DQN.load(idx)            
+                panther_model = DQN.load(idx)            
             elif panther_model_type.lower() == 'ppo2':
-                model = PPO2.load(idx)
+                panther_model = PPO2.load(idx)
             elif panther_model_type.lower() == 'a2c':
-                model = A2C.load(idx)    
+                panther_model = A2C.load(idx)    
             elif panther_model_type.lower() == 'acktr':
-                model = ACKTR.load(idx)            
+                panther_model = ACKTR.load(idx)            
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
@@ -379,6 +382,7 @@ def run_pnm(exp_path,
                                                                     parallel = parallel,
                                                                     image_based = image_based,
                                                                     num_parallel_envs = num_parallel_envs)
+        del panther_model
         panther_training_steps = panther_training_steps + steps
 
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
