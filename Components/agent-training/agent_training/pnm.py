@@ -212,7 +212,7 @@ def run_pnm(exp_path,
     # Train initial pelican vs default panther
     pelican_env = helper.get_envs('pelican',
                                   config_file_path,
-                                  num_envs = num_parallel_envs
+                                  num_envs = num_parallel_envs,
                                   image_based = image_based,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = 3,
@@ -236,7 +236,7 @@ def run_pnm(exp_path,
     # Train initial panther agent vs default pelican
     panther_env = helper.get_envs('panther',
                                   config_file_path,
-                                  num_envs = num_parallel_envs
+                                  num_envs = num_parallel_envs,
                                   image_based = image_based,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = 3,
