@@ -1,26 +1,22 @@
-# +
 # !pip install pycddlib
 import datetime
 import numpy as np
+import pandas as pd
 import os
-import copy
-import glob
-from stable_baselines.common.vec_env import SubprocVecEnv
-from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
-from gym_plark.envs.plark_env import PlarkEnv
+import gc
 from tensorboardX import SummaryWriter
 import helper
 import lp_solve
 import tensorflow as tf
-from stable_baselines import DQN, PPO2, A2C, ACKTR
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+gc.collect()
 
-# -
+
 
 def compute_payoff_matrix(pelican,
                           panther,
@@ -33,13 +29,13 @@ def compute_payoff_matrix(pelican,
                           image_based = False,
                           num_parallel_envs = 1):
     # Resizing the payoff matrix for new strategies
-    payoffs = np.pad(payoffs, 
-                     [(0, len(pelicans) - payoffs.shape[0]), 
-                      (0, len(panthers) - payoffs.shape[1])], 
+    payoffs = np.pad(payoffs,
+                     [(0, len(pelicans) - payoffs.shape[0]),
+                      (0, len(panthers) - payoffs.shape[1])],
                      mode = 'constant')
 
-    # Adding payoff for the last row strategy       
-    for i, opponent in enumerate(panthers):        
+    # Adding payoff for the last row strategy
+    for i, opponent in enumerate(panthers):
         env = helper.get_envs('pelican', config_file_path,
                               opponents = [opponent],
                               num_envs = num_parallel_envs,
@@ -47,7 +43,7 @@ def compute_payoff_matrix(pelican,
                               random_panther_start_position = True,
                               max_illegal_moves_per_turn = 3,
                               sparse = True,
-                              vecenv = parallel)                
+                              vecenv = parallel)
         victory_count, avg_reward = helper.check_victory(pelican, env, trials = trials // num_parallel_envs)
         payoffs[-1, i] = avg_reward
 
@@ -60,11 +56,11 @@ def compute_payoff_matrix(pelican,
                               random_panther_start_position = True,
                               max_illegal_moves_per_turn = 3,
                               sparse = True,
-                              vecenv = parallel) 
+                              vecenv = parallel)
         victory_count, avg_reward = helper.check_victory(panther, env, trials = trials // num_parallel_envs)
-        # Given that we are storing everything in one table, and the value below is now computed 
+        # Given that we are storing everything in one table, and the value below is now computed
         # from the perspective of the panther, I assume we need this value to be negative?
-        payoffs[i, -1] = -avg_reward 
+        payoffs[i, -1] = -avg_reward
     return payoffs
 
 def train_agent_against_mixture(driving_agent,
@@ -79,12 +75,12 @@ def train_agent_against_mixture(driving_agent,
                                 basicdate,
                                 tb_writer,
                                 tb_log_name,
-                                config_file_path,                                
+                                config_file_path,
                                 early_stopping = True,
                                 previous_steps = 0,
                                 parallel = False,
                                 image_based = False,
-                                num_parallel_envs = 1):       
+                                num_parallel_envs = 1):
     # If we use parallel envs, we run all the training against different sampled opponents in parallel
     if parallel:
         env = helper.get_envs(driving_agent,
@@ -96,7 +92,7 @@ def train_agent_against_mixture(driving_agent,
                               max_illegal_moves_per_turn = 3,
                               sparse = False,
                               vecenv = parallel,
-                              mixture = mixture) 
+                              mixture = mixture)
         agent_filepath, new_steps = train_agent(exp_path,
                                                 model,
                                                 env,
@@ -121,7 +117,7 @@ def train_agent_against_mixture(driving_agent,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = 3,
                                   sparse = False,
-                                  vecenv = parallel) 
+                                  vecenv = parallel)
             agent_filepath, new_steps = train_agent(exp_path,
                                                     model,
                                                     env,
@@ -132,8 +128,7 @@ def train_agent_against_mixture(driving_agent,
                                                     tb_writer,
                                                     tb_log_name,
                                                     early_stopping = True,
-                                                    previous_steps = previous_steps)   
-           
+                                                    previous_steps = previous_steps)
     return agent_filepath, new_steps
 
 def train_agent(exp_path,
@@ -195,7 +190,7 @@ def run_pnm(exp_path,
     os.makedirs(pelicans_tmp_exp_path, exist_ok = True)
     panthers_tmp_exp_path = os.path.join(exp_path, 'panthers_tmp')
     os.makedirs(panthers_tmp_exp_path, exist_ok = True)
-        
+
     if log_to_tb:
         writer = SummaryWriter(exp_path)
         pelican_tb_log_name = 'pelican'
@@ -225,7 +220,7 @@ def run_pnm(exp_path,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = 3,
                                   sparse = False,
-                                  vecenv = parallel) 
+                                  vecenv = parallel)
     pelican_model = helper.make_new_model(model_type, policy, pelican_env)
     logger.info('Training initial pelican')
     pelican_agent_filepath, steps = train_agent(pelicans_tmp_exp_path,
@@ -269,6 +264,9 @@ def run_pnm(exp_path,
     payoffs = np.zeros((1, 1))
     pelicans = []
     panthers = []
+    # Create DataFrame for plotting purposes
+    df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff"]
+    df = pd.DataFrame(columns = df_cols)
 
     # Train best responses until Nash equilibrium is found or max_iterations are reached
     logger.info('Parallel Nash Memory (PNM)')
@@ -301,9 +299,11 @@ def run_pnm(exp_path,
         logger.info(mixture_panthers)
         np.save('%s/mixture_panthers_%d.npy' % (pnm_logs_exp_path, i), mixture_panthers)
 
-        # Check if we found a stable NE, in that case we are done
+        # Check if we found a stable NE, in that case we are done (and fitting DF)
         br_value_pelican = np.dot(mixture_pelicans, payoffs[-1])
         br_value_panther = np.dot(mixture_panthers, -payoffs[:, -1])
+        values = dict(zip(df_cols, [value_pelicans, br_value_pelican, br_value_panther]))
+        df = df.append(values, ignore_index = True)
         if i > 0 and abs(br_value_pelican - value_pelicans) < stopping_eps and abs(br_value_panther - value_panthers) < stopping_eps:
             print('Stable Nash Equilibrium found')
             break
@@ -325,7 +325,8 @@ def run_pnm(exp_path,
             elif pelican_model_type.lower() == 'acktr':
                 pelican_model = ACKTR.load(idx)
             
-            
+            #path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
+            #pelican_model = helper.loadAgent(path, pelican_model_type)
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
@@ -363,6 +364,8 @@ def run_pnm(exp_path,
                 panther_model = A2C.load(idx)    
             elif panther_model_type.lower() == 'acktr':
                 panther_model = ACKTR.load(idx)            
+            #path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
+            #panther_model = helper.loadAgent(path, panther_model_type)
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
@@ -394,17 +397,17 @@ def run_pnm(exp_path,
     # Saving final mixture and corresponding agents
     support_pelicans = np.nonzero(mixture_pelicans)[0]
     mixture_pelicans = mixture_pelicans[support_pelicans]
-    np.save(exp_path + '/mixture_pelicans.npy', mixture_pelicans)    
+    np.save(exp_path + '/mixture_pelicans.npy', mixture_pelicans)
     for i, idx in enumerate(mixture_pelicans):
         pelican_model = helper.loadAgent(pelicans[i], pelican_model_type)
         agent_filepath ,_, _= helper.save_model_with_env_settings(pelicans_tmp_exp_path, pelican_model, pelican_model_type, pelican_env, basicdate + "_ps_" + str(i))
     support_panthers = np.nonzero(mixture_panthers)[0]
     mixture_panthers = mixture_panthers[support_panthers]
-    np.save(exp_path + '/mixture_panthers.npy', mixture_panthers)    
+    np.save(exp_path + '/mixture_panthers.npy', mixture_panthers)
     for i, idx in enumerate(mixture_panthers):
         panther_model = helper.loadAgent(panthers[i], panther_model_type)
         agent_filepath ,_, _= helper.save_model_with_env_settings(panthers_tmp_exp_path, panther_model, panther_model_type, panther_env, basicdate + "_ps_" + str(i))
-    return video_path, basewidth, hsize
+    return video_path, basewidth, hsize, df
 
 def main():
     basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
@@ -421,13 +424,11 @@ def main():
             panther_max_learning_steps = 250,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
-            retraining_prob = 1.0,
+            retraining_prob = 0.5,
             model_type = 'PPO2',
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 10)    
+            num_parallel_envs = 10)
 
 if __name__ == '__main__':
     main()
-
-
