@@ -78,13 +78,10 @@ class PantherNN(Panther_Agent):
         assert len(state) == self.num_inputs, "State length: {}, num inputs: {}" \
             .format(len(state), self.num_inputs)
 
-        print("PantherNN action!")
+        net_out = self.sess.run(self._forward_pass(self.X), feed_dict={self.X: [state]})
 
-        out = self.sess.run(self._forward_pass(self.X), feed_dict={self.X: [state]})
-        print("Out:\n", out)
-
-        #action = self._get_most_probable_action(out[0])
-        action = self._sample_action(out[0])
+        #action = self._get_most_probable_action(net_out[0])
+        action = self._sample_action(net_out[0])
 
         return action
 

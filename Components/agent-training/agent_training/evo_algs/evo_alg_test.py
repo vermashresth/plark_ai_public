@@ -2,17 +2,25 @@ from gym_plark.envs.plark_env import PlarkEnv
 from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 from plark_game.agents.basic.panther_nn import PantherNN
 
+from deap import creator, base, benchmarks, cma, tools, algorithms
+
+import numpy as np
+
 def evaluate(agent):
 
     env.reset()
 
     max_num_steps = 1
 
+    reward = 0
     obs = env._observation()
-
     for step_num in range(max_num_steps):
         action = agent.getAction(obs)    
-        obs, reward, done, _ = env.step(action)
+        obs, r, done, _ = env.step(action)
+        reward += r
+
+    return reward
+
 
     #Making the video
 
@@ -25,6 +33,7 @@ def evaluate(agent):
 
 if __name__ == '__main__':
 
+    '''
     #Instantiate the env
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/balanced_nn.json'
     env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
@@ -35,45 +44,39 @@ if __name__ == '__main__':
     neurons_per_hidden_layer = 0
     panther_agent = PantherNN(num_inputs=num_inputs, num_hidden_layers=num_hidden_layers, 
                               neurons_per_hidden_layer=neurons_per_hidden_layer)  
-    #panther_agent.set_weights([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-    #panther_agent.set_weights([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0])
+    #num_weights = panther_agent.get_num_weights()
+    '''
+    num_weights = 3
+
     
-    panther_weights = panther_agent.get_weights()
+    #creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+    #creator.create("Individual", list, fitness=creator.FitnessMax)
+    creator.create("Individual", list, fitness=creator.FitnessMin)
 
-    evaluate(panther_agent)
+    toolbox = base.Toolbox()
+    #toolbox.register("evaluate", evaluate)
+    toolbox.register("evaluate", benchmarks.rastrigin)
 
+    np.random.seed(108)
 
-'''
-import random
-from deap import creator, base, tools, algorithms
+    #Initial location of distribution centre
+    centroid = [0.0] * num_weights
+    #Initial standard deviation of the distribution
+    init_sigma = 1.0
+    #Number of children to produce at each generation
+    lambda_ = 20 * num_weights
+    strategy = cma.Strategy(centroid=centroid, sigma=init_sigma, lambda_=lambda_)
 
-creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-creator.create("Individual", list, fitness=creator.FitnessMax)
+    toolbox.register("generate", strategy.generate, creator.Individual)
+    toolbox.register("update", strategy.update)
 
-toolbox = base.Toolbox()
+    hof = tools.HallOfFame(1)
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", np.mean)
+    stats.register("std", np.std)
+    stats.register("min", np.min)
+    stats.register("max", np.max)
 
-toolbox.register("attr_bool", random.randint, 0, 1)
-toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, n=100)
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-def evalOneMax(individual):
-    return sum(individual),
-
-toolbox.register("evaluate", evalOneMax)
-toolbox.register("mate", tools.cxTwoPoint)
-toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
-toolbox.register("select", tools.selTournament, tournsize=3)
-
-population = toolbox.population(n=300)
-
-#NGEN=40
-NGEN=1
-for gen in range(NGEN):
-    offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.1)
-    fits = toolbox.map(toolbox.evaluate, offspring)
-    for fit, ind in zip(fits, offspring):
-        ind.fitness.values = fit
-    population = toolbox.select(offspring, k=len(population))
-top10 = tools.selBest(population, k=10)
-print(top10)
-'''
+    num_gens = 250
+    algorithms.eaGenerateUpdate(toolbox, ngen=num_gens, stats=stats, halloffame=hof)
