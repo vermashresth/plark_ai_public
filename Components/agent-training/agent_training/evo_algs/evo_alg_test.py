@@ -9,11 +9,10 @@ def evaluate(agent):
     max_num_steps = 1
 
     obs = env._observation()
-    obs = [3.0, 4.0]
 
     for step_num in range(max_num_steps):
         action = agent.getAction(obs)    
-        #obs, reward, done, _ = env.step(action)
+        obs, reward, done, _ = env.step(action)
 
     #Making the video
 
@@ -34,15 +33,12 @@ if __name__ == '__main__':
     num_inputs = len(env._observation())
     num_hidden_layers = 0
     neurons_per_hidden_layer = 0
-    panther_agent = PantherNN(num_inputs=2, num_hidden_layers=num_hidden_layers, 
+    panther_agent = PantherNN(num_inputs=num_inputs, num_hidden_layers=num_hidden_layers, 
                               neurons_per_hidden_layer=neurons_per_hidden_layer)  
-    panther_agent.set_weights([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    #panther_agent.set_weights([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
     #panther_agent.set_weights([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0])
     
     panther_weights = panther_agent.get_weights()
-    print(panther_weights)
-
-    exit()
 
     evaluate(panther_agent)
 

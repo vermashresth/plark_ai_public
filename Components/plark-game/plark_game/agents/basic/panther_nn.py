@@ -6,10 +6,11 @@ class PantherNN(Panther_Agent):
 
     def __init__(self, num_inputs, num_hidden_layers=0, neurons_per_hidden_layer=0):
         self.num_inputs = num_inputs
-        #self.num_outputs = len(ACTION_LOOKUP) 
-        self.num_outputs = 2
+        self.num_outputs = len(ACTION_LOOKUP) 
         self.num_hidden_layers = num_hidden_layers
         self.neurons_per_hidden_layer = neurons_per_hidden_layer
+
+        tf.random.set_random_seed(5)
 
         #Build neural net
         self._build_nn()
@@ -58,19 +59,34 @@ class PantherNN(Panther_Agent):
             #Add ReLU to all hidden layers
             if i < (len(self.weights)-1):
                 out = tf.nn.relu(out)
+            #Add softmax to the output layer
+            else:
+                out = tf.nn.softmax(out)
+
         return out
+    
+    #Randomly sample action from network output probability distribution
+    def _sample_action(self, net_out):
+        action_nums = list(range(len(net_out)))
+        return np.random.choice(action_nums, p=net_out)
+
+    #Get the most probable action from the network output probability distribution
+    def _get_most_probable_action(self, net_out):
+        return np.argmax(net_out)
 
     def getAction(self, state):
-        assert len(state) == self.num_inputs
+        assert len(state) == self.num_inputs, "State length: {}, num inputs: {}" \
+            .format(len(state), self.num_inputs)
 
         print("PantherNN action!")
-
-        self.print_weights()
 
         out = self.sess.run(self._forward_pass(self.X), feed_dict={self.X: [state]})
         print("Out:\n", out)
 
-        return 0
+        #action = self._get_most_probable_action(out[0])
+        action = self._sample_action(out[0])
+
+        return action
 
     #Returns the number of weights and biases
     def get_num_weights(self):
