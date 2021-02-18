@@ -15,7 +15,7 @@ from stable_baselines.common.env_checker import check_env
 from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
 from stable_baselines.common.vec_env import DummyVecEnv, VecEnv
-
+from copy import deepcopy
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -194,7 +194,11 @@ def get_envs(driving_agent,
         return SubprocVecEnv([lambda:get_env(**params) for _ in range(num_envs)])
     elif len(opponents) >= 2:
         opponents = np.random.choice(opponents, size = num_envs, p = mixture)
-        return SubprocVecEnv([lambda:get_env(**params.update(opponent=opponent)) for opponent in opponents])
+        params_list = []
+        for o in opponents:
+            params.update(opponent=o)
+            params_list.append(deepcopy(params))
+        return SubprocVecEnv([lambda:get_env(**params) for params in params_list])
 
 # Save model base on env
 def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
