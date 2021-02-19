@@ -7,7 +7,7 @@
         "max_illegal_moves_per_turn": 10
     },
     "game_rules": {
-        "bingo_limit": 36,
+        "bingo_limit": -1,
         "winchester_rule": true,
         "escape_rule": true,
         "panther": {
