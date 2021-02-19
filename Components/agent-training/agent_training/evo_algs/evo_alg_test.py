@@ -6,7 +6,9 @@ from deap import creator, base, benchmarks, cma, tools, algorithms
 
 import numpy as np
 
-def evaluate(agent):
+def evaluate(genome, agent):
+
+    agent.set_weights(genome)
 
     env.reset()
 
@@ -19,7 +21,7 @@ def evaluate(agent):
         obs, r, done, _ = env.step(action)
         reward += r
 
-    return reward
+    return [reward]
 
 
     #Making the video
@@ -33,7 +35,6 @@ def evaluate(agent):
 
 if __name__ == '__main__':
 
-    '''
     #Instantiate the env
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/balanced_nn.json'
     env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
@@ -44,28 +45,23 @@ if __name__ == '__main__':
     neurons_per_hidden_layer = 0
     panther_agent = PantherNN(num_inputs=num_inputs, num_hidden_layers=num_hidden_layers, 
                               neurons_per_hidden_layer=neurons_per_hidden_layer)  
-    #num_weights = panther_agent.get_num_weights()
-    '''
-    num_weights = 3
-
+    num_weights = panther_agent.get_num_weights()
     
-    #creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-    #creator.create("Individual", list, fitness=creator.FitnessMax)
-    creator.create("Individual", list, fitness=creator.FitnessMin)
+    creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+    creator.create("Individual", list, fitness=creator.FitnessMax)
 
     toolbox = base.Toolbox()
-    #toolbox.register("evaluate", evaluate)
-    toolbox.register("evaluate", benchmarks.rastrigin)
+    toolbox.register("evaluate", evaluate, agent=panther_agent)
 
-    np.random.seed(108)
+    #np.random.seed(108)
 
     #Initial location of distribution centre
     centroid = [0.0] * num_weights
     #Initial standard deviation of the distribution
     init_sigma = 1.0
     #Number of children to produce at each generation
-    lambda_ = 20 * num_weights
+    #lambda_ = 20 * num_weights
+    lambda_ = 50
     strategy = cma.Strategy(centroid=centroid, sigma=init_sigma, lambda_=lambda_)
 
     toolbox.register("generate", strategy.generate, creator.Individual)
