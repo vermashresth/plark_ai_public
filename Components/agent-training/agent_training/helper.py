@@ -499,3 +499,30 @@ def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps
     writer.close()  
     return basewidth,hsize  
 
+def make_video_plark_env(agent, env, video_file_path, n_steps=10000, fps=10, deterministic=False, basewidth=512, verbose=False):
+
+    # Test the trained agent
+    # This is when you have a plark game agent and a plark env
+    env.reset()
+    writer = imageio.get_writer(video_file_path, fps=fps) 
+    hsize = None
+
+    obs = env._observation()
+    for step in range(n_steps):
+        image = env.render(view='ALL')
+        action = agent.getAction(obs)
+        obs, _, done, _ = env.step(action)
+       
+        if hsize is None:
+            wpercent = (basewidth/float(image.size[0]))
+            hsize = int((float(image.size[1])*float(wpercent)))
+        res_image = image.resize((basewidth,hsize), PIL.Image.ANTIALIAS)
+        writer.append_data(np.copy(np.array(res_image)))
+
+        if done:
+            break
+
+    writer.close()  
+
+    return basewidth,hsize  
+
