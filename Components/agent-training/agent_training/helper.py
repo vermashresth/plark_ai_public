@@ -28,13 +28,13 @@ def model_label(modeltype,basicdate,modelplayer):
     label = modeltype + "_" + str(basicdate) + "_" + modelplayer
     return label
 
-def make_new_model(model_type,policy,env, tensorboard_log=None):
+def make_new_model(model_type,policy,env, n_steps=100, tensorboard_log=None):
     if model_type.lower() == 'dqn':
         model = DQN(policy,env,tensorboard_log=tensorboard_log)
     elif model_type.lower() == 'ppo2':
         model = PPO2(policy,env,tensorboard_log=tensorboard_log)
     elif model_type.lower() == 'ppo':
-        model = PPO(policy,env)
+        model = PPO(policy,env, n_steps=n_steps)
     elif model_type.lower() == 'a2c':
         model = A2C(policy,env,tensorboard_log=tensorboard_log)
     elif model_type.lower() == 'acktr':

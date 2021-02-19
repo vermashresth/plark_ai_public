@@ -4,6 +4,9 @@
 # !pip install numba
 # !pip install stable-baselines3
 
+import sys
+sys.path.insert(1, '/Components/')
+
 import datetime
 import numpy as np
 import pandas as pd
@@ -70,9 +73,10 @@ def compute_payoff_matrix(pelican,
         # Given that we are storing everything in one table, and the value below is now computed
         # from the perspective of the panther, I assume we need this value to be negative?
         payoffs[i, -1] = -avg_reward
+    env.env_method('clear_memory')
     del env
     gc.collect()
-    torch.cuda.empty_cache()            
+    torch.cuda.empty_cache()              
     return payoffs
 
 def train_agent_against_mixture(driving_agent,
@@ -141,6 +145,7 @@ def train_agent_against_mixture(driving_agent,
                                                     tb_log_name,
                                                     early_stopping = True,
                                                     previous_steps = previous_steps)
+    env.env_method('clear_memory')
     del env
     gc.collect()
     torch.cuda.empty_cache()    
@@ -237,7 +242,7 @@ def run_pnm(exp_path,
                                   max_illegal_moves_per_turn = 3,
                                   sparse = False,
                                   vecenv = parallel)
-    pelican_model = helper.make_new_model(model_type, policy, pelican_env)
+    pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
     logger.info('Training initial pelican')
     pelican_agent_filepath, steps = train_agent(pelicans_tmp_exp_path,
                                                 pelican_model,
@@ -261,7 +266,7 @@ def run_pnm(exp_path,
                                   max_illegal_moves_per_turn = 3,
                                   sparse = False,
                                   vecenv = parallel)
-    panther_model = helper.make_new_model(model_type, policy, panther_env)
+    panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
     logger.info('Training initial panther')
     panther_agent_filepath, steps = train_agent(panthers_tmp_exp_path,
                                                 panther_model,
@@ -304,13 +309,13 @@ def run_pnm(exp_path,
                                         parallel = parallel,
                                         image_based = image_based,
                                         num_parallel_envs = num_parallel_envs)
-        
+        logger.info("Memory allocated before: " + str(torch.cuda.memory_allocated()))
         logger.info("Clearing GPU memory.")
         del pelican_model
         del panther_model
         gc.collect()
         torch.cuda.empty_cache()
-        
+        logger.info("Memory allocated after: " + str(torch.cuda.memory_allocated()))
         logger.info(payoffs)
         np.save('%s/payoffs_%d.npy' % (pnm_logs_exp_path, i), payoffs)
         (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
@@ -336,9 +341,9 @@ def run_pnm(exp_path,
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
             path = glob.glob(path+"/*.zip")[0]
-            pelican_model = helper.loadAgent(path, pelican_model_type)
+            pelican_model = helper.loadAgent(path, pelican_model_type, n_steps=pelican_testing_interval)
         else:
-            pelican_model = helper.make_new_model(model_type, policy, pelican_env)
+            pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
                                                                     policy,
                                                                     pelicans_tmp_exp_path,
@@ -363,9 +368,9 @@ def run_pnm(exp_path,
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
             path = glob.glob(path+"/*.zip")[0]
-            panther_model = helper.loadAgent(path, panther_model_type)
+            panther_model = helper.loadAgent(path, panther_model_type, n_steps=panther_testing_interval)
         else:
-            panther_model = helper.make_new_model(model_type, policy, panther_env)
+            panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
                                                                     policy,
                                                                     panthers_tmp_exp_path,

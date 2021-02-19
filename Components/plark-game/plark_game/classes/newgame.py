@@ -20,6 +20,8 @@ import sys
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+import torch
+import gc
 
 class Newgame():
 
@@ -102,6 +104,19 @@ class Newgame():
             kwargs = {}
             kwargs['driving_agent'] = 'panther'
             self.pantherAgent =  Panther_Agent_Set_Agent(panther, Observation(self, **kwargs))
+
+
+        def clear_memory(self):
+            print("Clearing memory")
+            if self.driving_agent == 'panther':
+                print("Deleting pelican")
+                del self.pelicanAgent
+            else:
+                print("Deleting panther")
+                del self.pantherAgent
+            gc.collect()
+            torch.cuda.empty_cache()
+            print("Done")
 
         def game_step(self, action):
                 if self.phase == "PELICAN":
