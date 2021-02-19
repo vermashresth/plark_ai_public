@@ -4,17 +4,19 @@ import numpy as np
 import pandas as pd
 import os
 import gc
+import glob
 from tensorboardX import SummaryWriter
 import helper
 import lp_solve
 import tensorflow as tf
+from stable_baselines import DQN, PPO2, A2C, ACKTR
+gc.collect()
 
+import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.ERROR)
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-gc.collect()
 
 
 
@@ -104,7 +106,7 @@ def train_agent_against_mixture(driving_agent,
                                                 tb_log_name,
                                                 early_stopping = True,
                                                 previous_steps = previous_steps)
-        
+
     # Otherwise we sample different opponents and we train against each of them separately
     else:
         opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
@@ -179,7 +181,8 @@ def run_pnm(exp_path,
             model_type = 'PPO2',
             log_to_tb = False,
             image_based = True,
-            num_parallel_envs = 1):
+            num_parallel_envs = 1,
+            early_stopping=True):
 
     pelican_training_steps = 0
     panther_training_steps = 0
@@ -271,7 +274,7 @@ def run_pnm(exp_path,
     # Train best responses until Nash equilibrium is found or max_iterations are reached
     logger.info('Parallel Nash Memory (PNM)')
     for i in range(max_pnm_iterations):
-        logger.info('PNM iteration ' + str(i) + ' of ' + str(max_pnm_iterations))
+        logger.info('PNM iteration ' + str(i + 1) + ' of ' + str(max_pnm_iterations))
         pelicans.append(pelican_agent_filepath)
         panthers.append(panther_agent_filepath)
 
@@ -284,7 +287,7 @@ def run_pnm(exp_path,
                                         pelicans,
                                         panthers,
                                         config_file_path,
-                                        trials = 100,
+                                        trials = 10,
                                         parallel = parallel,
                                         image_based = image_based,
                                         num_parallel_envs = num_parallel_envs)
@@ -304,29 +307,16 @@ def run_pnm(exp_path,
         br_value_panther = np.dot(mixture_panthers, -payoffs[:, -1])
         values = dict(zip(df_cols, [value_pelicans, br_value_pelican, br_value_panther]))
         df = df.append(values, ignore_index = True)
-        if i > 0 and abs(br_value_pelican - value_pelicans) < stopping_eps and abs(br_value_panther - value_panthers) < stopping_eps:
+        if early_stopping and i > 0 and abs(br_value_pelican - value_pelicans) < stopping_eps and abs(br_value_panther - value_panthers) < stopping_eps:
             print('Stable Nash Equilibrium found')
             break
 
         # Train from skratch or retrain an existing model for pelican
         logger.info('Training pelican')
         if np.random.rand(1) < retraining_prob:
-            idx = np.random.choice(pelicans, 1, p = mixture_pelicans)[0] 
-            idx = glob.glob(idx+"/*.zip")[0]
-            print(idx)
-            #pelican_model = helper.loadAgent(pelicans[idx], pelican_model_type)
-            #pelican_model = helper.loadAgent(idx, pelican_model_type)
-            if pelican_model_type.lower() == 'dqn':
-                pelican_model = DQN.load(idx)            
-            elif pelican_model_type.lower() == 'ppo2':
-                pelican_model = PPO2.load(idx)
-            elif pelican_model_type.lower() == 'a2c':
-                pelican_model = A2C.load(idx)    
-            elif pelican_model_type.lower() == 'acktr':
-                pelican_model = ACKTR.load(idx)
-            
-            #path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
-            #pelican_model = helper.loadAgent(path, pelican_model_type)
+            path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
+            path = glob.glob(path+"/*.zip")[0]
+            pelican_model = helper.loadAgent(path, pelican_model_type)
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
@@ -346,26 +336,14 @@ def run_pnm(exp_path,
                                                                     parallel = parallel,
                                                                     image_based = image_based,
                                                                     num_parallel_envs = num_parallel_envs)
-        del pelican_model
         pelican_training_steps = pelican_training_steps + steps
 
         # Train from skratch or retrain an existing model for panther
         logger.info('Training panther')
         if np.random.rand(1) < retraining_prob:
-            idx = np.random.choice(panthers, 1, p = mixture_panthers)[0]            
-            idx = glob.glob(idx+"/*.zip")[0]
-            #panther_model = helper.loadAgent(panthers[idx], panther_model_type)
-            #panther_model = helper.loadAgent(idx, panther_model_type)
-            if panther_model_type.lower() == 'dqn':
-                panther_model = DQN.load(idx)            
-            elif panther_model_type.lower() == 'ppo2':
-                panther_model = PPO2.load(idx)
-            elif panther_model_type.lower() == 'a2c':
-                panther_model = A2C.load(idx)    
-            elif panther_model_type.lower() == 'acktr':
-                panther_model = ACKTR.load(idx)            
-            #path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
-            #panther_model = helper.loadAgent(path, panther_model_type)
+            path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
+            path = glob.glob(path+"/*.zip")[0]
+            panther_model = helper.loadAgent(path, panther_model_type)
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
@@ -385,11 +363,13 @@ def run_pnm(exp_path,
                                                                     parallel = parallel,
                                                                     image_based = image_based,
                                                                     num_parallel_envs = num_parallel_envs)
-        del panther_model
         panther_training_steps = panther_training_steps + steps
 
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))
+    # Store DF for printing
+    df_path = os.path.join(exp_path, "values.csv")
+    df.to_csv(df_path, index = False)
     # Make video
     video_path =  os.path.join(exp_path, 'test_pnm.mp4')
     basewidth,hsize = helper.make_video(pelican_model, pelican_env, video_path)
@@ -407,7 +387,7 @@ def run_pnm(exp_path,
     for i, idx in enumerate(mixture_panthers):
         panther_model = helper.loadAgent(panthers[i], panther_model_type)
         agent_filepath ,_, _= helper.save_model_with_env_settings(panthers_tmp_exp_path, panther_model, panther_model_type, panther_env, basicdate + "_ps_" + str(i))
-    return video_path, basewidth, hsize, df
+    return video_path, basewidth, hsize
 
 def main():
     basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
@@ -424,11 +404,12 @@ def main():
             panther_max_learning_steps = 250,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
-            retraining_prob = 0.5,
+            retraining_prob = 1.0,
             model_type = 'PPO2',
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 10)
+            num_parallel_envs = 1,
+            early_stopping = False)
 
 if __name__ == '__main__':
     main()
