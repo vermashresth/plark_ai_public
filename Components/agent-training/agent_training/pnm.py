@@ -1,4 +1,9 @@
+# +
 # !pip install pycddlib
+# !pip install torch
+# !pip install numba
+# !pip install stable-baselines3
+
 import datetime
 import numpy as np
 import pandas as pd
@@ -9,8 +14,9 @@ from tensorboardX import SummaryWriter
 import helper
 import lp_solve
 import tensorflow as tf
-from stable_baselines import DQN, PPO2, A2C, ACKTR
-gc.collect()
+import torch
+        
+# -
 
 import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -46,6 +52,7 @@ def compute_payoff_matrix(pelican,
                               max_illegal_moves_per_turn = 3,
                               sparse = True,
                               vecenv = parallel)
+
         victory_count, avg_reward = helper.check_victory(pelican, env, trials = trials // num_parallel_envs)
         payoffs[-1, i] = avg_reward
 
@@ -63,6 +70,9 @@ def compute_payoff_matrix(pelican,
         # Given that we are storing everything in one table, and the value below is now computed
         # from the perspective of the panther, I assume we need this value to be negative?
         payoffs[i, -1] = -avg_reward
+    del env
+    gc.collect()
+    torch.cuda.empty_cache()            
     return payoffs
 
 def train_agent_against_mixture(driving_agent,
@@ -131,6 +141,9 @@ def train_agent_against_mixture(driving_agent,
                                                     tb_log_name,
                                                     early_stopping = True,
                                                     previous_steps = previous_steps)
+    del env
+    gc.collect()
+    torch.cuda.empty_cache()    
     return agent_filepath, new_steps
 
 def train_agent(exp_path,
@@ -208,7 +221,7 @@ def run_pnm(exp_path,
         policy = 'MlpPolicy'
 
     parallel = False
-    if model_type.lower() == 'ppo2':
+    if 'ppo' in model_type.lower():
         parallel = True
 
     pnm_logs_exp_path = '/data/pnm_logs/test_' + basicdate
@@ -291,6 +304,13 @@ def run_pnm(exp_path,
                                         parallel = parallel,
                                         image_based = image_based,
                                         num_parallel_envs = num_parallel_envs)
+        
+        logger.info("Clearing GPU memory.")
+        del pelican_model
+        del panther_model
+        gc.collect()
+        torch.cuda.empty_cache()
+        
         logger.info(payoffs)
         np.save('%s/payoffs_%d.npy' % (pnm_logs_exp_path, i), payoffs)
         (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
@@ -365,6 +385,7 @@ def run_pnm(exp_path,
                                                                     num_parallel_envs = num_parallel_envs)
         panther_training_steps = panther_training_steps + steps
 
+        
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))
     # Store DF for printing
@@ -398,17 +419,17 @@ def main():
 
     run_pnm(exp_path,
             basicdate,
-            pelican_testing_interval = 250,
-            pelican_max_learning_steps = 250,
-            panther_testing_interval = 250,
-            panther_max_learning_steps = 250,
+            pelican_testing_interval = 100,
+            pelican_max_learning_steps = 100,
+            panther_testing_interval = 100,
+            panther_max_learning_steps = 100,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
             retraining_prob = 1.0,
-            model_type = 'PPO2',
+            model_type = 'PPO', # 'PPO' instead of 'PPO2' since we are using torch version
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 1,
+            num_parallel_envs = 2,
             early_stopping = False)
 
 if __name__ == '__main__':

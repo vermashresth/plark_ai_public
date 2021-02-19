@@ -16,6 +16,11 @@ from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
 from stable_baselines.common.vec_env import DummyVecEnv, VecEnv
 from copy import deepcopy
+
+# PyTorch Stable Baselines
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv as SubprocVecEnv_Torch
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -28,6 +33,8 @@ def make_new_model(model_type,policy,env, tensorboard_log=None):
         model = DQN(policy,env,tensorboard_log=tensorboard_log)
     elif model_type.lower() == 'ppo2':
         model = PPO2(policy,env,tensorboard_log=tensorboard_log)
+    elif model_type.lower() == 'ppo':
+        model = PPO(policy,env)
     elif model_type.lower() == 'a2c':
         model = A2C(policy,env,tensorboard_log=tensorboard_log)
     elif model_type.lower() == 'acktr':
@@ -74,13 +81,53 @@ def train_until(model, env, victory_threshold=0.8, victory_trials=10, max_second
 
 def check_victory(model,env,trials = 10):
     victory_count = 0
-    list_of_reward, n_steps, victories = evaluate_policy(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
-
+    if isinstance(env, SubprocVecEnv_Torch):
+        list_of_reward, n_steps, victories = evaluate_policy_torch(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
+    else: 
+        list_of_reward, n_steps, victories = evaluate_policy(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
     victory_count = len([v for v in victories if v == True])
     logger.info('victory_count = '+ str(victory_count))        
     avg_reward = float(sum(list_of_reward))/len(list_of_reward)
     logger.info('avg_reward = '+ str(avg_reward))        
     return victory_count, avg_reward
+
+def evaluate_policy_torch(model, env, n_eval_episodes=4, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False):
+    """
+    Modified from https://stable-baselines.readthedocs.io/en/master/_modules/stable_baselines/common/evaluation.html#evaluate_policy
+    to return additional info
+    """
+    logger.debug("Evaluating policy")
+    episode_rewards, episode_lengths, victories = [], [], []
+    obs = env.reset()
+    episodes_reward = [0.0 for _ in range(env.num_envs)]
+    episodes_len = [0.0 for _ in range(env.num_envs)]
+    state = None
+    while len(episode_rewards) < n_eval_episodes:
+        action, state = model.predict(obs, state=state, deterministic=deterministic)
+        obs, rewards, dones, _infos = env.step(action)
+        for i in range(len(rewards)):
+            episodes_reward[i] += rewards[i]
+            episodes_len[i] += 1
+        if render:
+            env.render()
+        if dones.any():
+           for i, d in enumerate(dones):
+               if d:
+                   info = _infos[i]
+                   victory = info['result'] == "WIN"
+                   victories.append(victory)
+                   episode_rewards.append(episodes_reward[i])
+                   episode_lengths.append(episodes_len[i])
+                   episodes_reward[i] = 0
+                   episodes_len[i] = 0
+
+    mean_reward = np.mean(episode_rewards)
+    std_reward = np.std(episode_rewards)
+    if reward_threshold is not None:
+        assert mean_reward > reward_threshold, "Mean reward below threshold: {:.2f} < {:.2f}".format(mean_reward, reward_threshold)
+    if return_episode_rewards:
+        return episode_rewards, episode_lengths, victories
+    return mean_reward, std_reward, victories
 
 def evaluate_policy(model, env, n_eval_episodes=4, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False):
     """
@@ -96,7 +143,7 @@ def evaluate_policy(model, env, n_eval_episodes=4, deterministic=True, render=Fa
 
         episode_length = 0
         episode_reward = 0.0
-        if isinstance(env, VecEnv):
+        if isinstance(env, VecEnv) or isinstance(env, SubprocVecEnv_Torch):
             episodes_reward = [0.0 for _ in range(env.num_envs)]
         else:
             episodes_reward = [0.0]
@@ -187,24 +234,23 @@ def get_envs(driving_agent,
 
     if len(opponents) == 1:
         params.update(opponent=opponents[0])
-
     if vecenv == False:
         return get_env(**params)
     elif len(opponents) < 2:
-        return SubprocVecEnv([lambda:get_env(**params) for _ in range(num_envs)])
+        return SubprocVecEnv_Torch([lambda:get_env(**params) for _ in range(num_envs)])
     elif len(opponents) >= 2:
         opponents = np.random.choice(opponents, size = num_envs, p = mixture)
         params_list = []
         for o in opponents:
             params.update(opponent=o)
             params_list.append(deepcopy(params))
-        return SubprocVecEnv([lambda:get_env(**params) for params in params_list])
+        return SubprocVecEnv_Torch([lambda:get_env(**params) for params in params_list])
 
 # Save model base on env
 def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
     if basicdate is None:
         basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-    if isinstance(env, VecEnv):
+    if isinstance(env, VecEnv) or isinstance(env, SubprocVecEnv_Torch):
         modelplayer = env.get_attr('driving_agent')[0]
         render_height = env.get_attr('render_height')[0]
         render_width = env.get_attr('render_width')[0]
@@ -326,6 +372,8 @@ def loadAgent(filepath, algorithm_type):
             model = DQN.load(filepath)
         elif algorithm_type.lower() == 'ppo2': 
             model = PPO2.load(filepath)
+        elif algorithm_type.lower() == 'ppo': 
+            model = PPO.load(filepath)
         elif algorithm_type.lower() == 'a2c':
             model = A2C.load(filepath)
         elif algorithm_type.lower() == 'acktr':
