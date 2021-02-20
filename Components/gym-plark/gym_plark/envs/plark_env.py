@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 class PlarkEnv(gym.Env):
 	metadata = {'render.modes': ['human']}
 
@@ -216,6 +217,16 @@ class PlarkEnv(gym.Env):
 
 	def set_panther(self, panther):
             self.env.activeGames[len(self.env.activeGames)-1].set_panther(panther)
+
+	def set_pelican_using_path(self, pelican):
+            self.env.activeGames[len(self.env.activeGames)-1].load_pelican_using_path(pelican)
+
+	def set_panther_using_path(self, panther):
+            self.env.activeGames[len(self.env.activeGames)-1].load_panther_using_path(panther)
+
+	def clear_memory(self):
+            self.env.activeGames[len(self.env.activeGames)-1].clear_memory()
+
 
 	def wrapper_test_function(self):
             print("hello there!")
