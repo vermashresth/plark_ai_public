@@ -5,6 +5,8 @@ from .pelicanAgent import Pelican_Agent
 import logging
 import numpy  as np
 from .pil_ui import PIL_UI
+import gc
+import torch
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
 			logger.info('pelican agent loaded')
 		else:
 			raise ValueError('Error loading pelican agent. File : "' + filepath + '" does not exsist' )
-
+        
 	def loadAgent(self, filepath, algorithm_type ):
 		try:
 			if algorithm_type.lower() == 'dqn':

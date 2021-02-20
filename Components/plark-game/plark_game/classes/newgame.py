@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 import torch
 import gc
+import glob
 
 class Newgame():
 
@@ -105,18 +106,6 @@ class Newgame():
             kwargs['driving_agent'] = 'panther'
             self.pantherAgent =  Panther_Agent_Set_Agent(panther, Observation(self, **kwargs))
 
-
-        def clear_memory(self):
-            print("Clearing memory")
-            if self.driving_agent == 'panther':
-                print("Deleting pelican")
-                del self.pelicanAgent
-            else:
-                print("Deleting panther")
-                del self.pantherAgent
-            gc.collect()
-            torch.cuda.empty_cache()
-            print("Done")
 
         def game_step(self, action):
                 if self.phase == "PELICAN":
@@ -564,6 +553,30 @@ class Newgame():
                         'fill': 'red'
                 }
 
+        def load_pelican_using_path(self, file_path, observation=None, image_based=False, **kwargs):
+            metadata_filepath = os.path.join(file_path, 'metadata.json')
+            agent_filepath = glob.glob(file_path+"/*.zip")[0]
+            with open(metadata_filepath) as f:
+                metadata = json.load(f)
+            logger.info('Playing against:'+agent_filepath)  
+            kwargs = {}
+            kwargs['driving_agent'] = metadata['agentplayer'] 
+            if image_based == False:
+                observation = Observation(self,**kwargs)
+            self.pelicanAgent = Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
+
+        def load_panther_using_path(self, file_path, observation=None, image_based=False, **kwargs):
+            metadata_filepath = os.path.join(file_path, 'metadata.json')
+            agent_filepath = glob.glob(file_path+"/*.zip")[0]
+            with open(metadata_filepath) as f:
+                metadata = json.load(f)
+            logger.info('Playing against:'+agent_filepath)  
+            kwargs = {}
+            kwargs['driving_agent'] = metadata['agentplayer']
+            if image_based == False:
+                observation = Observation(self,**kwargs)
+            self.pantherAgent = Panther_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
+
 def load_agent(file_path, agent_name,basic_agents_filepath,game,**kwargs):
         if '.py' in file_path: # This is the case for an agent in a non standard location or selected throguh web ui. 
                         # load python
@@ -602,7 +615,7 @@ def load_agent(file_path, agent_name,basic_agents_filepath,game,**kwargs):
                                                 kwargs = {}
                                         kwargs['driving_agent'] = metadata['agentplayer'] 
                                         observation = Observation(game,**kwargs)
-
+                                print("Filepath of the agent being loaded is: " + agent_filepath)
                                 if metadata['agentplayer'] == 'pelican':        
                                         return Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
                                 elif metadata['agentplayer'] == 'panther':

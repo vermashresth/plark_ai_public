@@ -5,6 +5,8 @@ from .pantherAgent import Panther_Agent
 import logging
 import numpy  as np
 from .pil_ui import PIL_UI
+import gc
+import torch
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
