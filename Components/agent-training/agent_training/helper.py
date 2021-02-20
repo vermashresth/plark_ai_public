@@ -453,6 +453,8 @@ def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps
 
 def make_video_plark_env(agent, env, video_file_path, n_steps=10000, fps=10, deterministic=False, basewidth=512, verbose=False):
 
+    print("Recording video...")
+
     # Test the trained agent
     # This is when you have a plark game agent and a plark env
     env.reset()

@@ -6,64 +6,98 @@ from agent_training import helper
 from deap import creator, base, benchmarks, cma, tools, algorithms
 
 import numpy as np
+import copy
 
-indv = 0
-def evaluate(genome, agent):
-    global indv
-    print("Evaluating indv:", indv)
+def save_video(genome, agent, env, num_steps, file_name='evo_run.mp4'):
 
-    #print("Genome:", genome)
+    agent.set_weights(genome)
+    video_path = '/' + file_name
+    helper.make_video_plark_env(agent, env, video_path, n_steps=num_steps)
+
+indv_num = 0
+#def evaluate(genome, agent, env):
+def evaluate(genome):
+    global indv_num
+    print("Evaluating indv:", indv_num)
+
+    #Instantiate the env
+    config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/balanced_nn.json'
+    env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
+                         driving_agent='panther')
+
+    num_inputs = len(env._observation())
+    num_hidden_layers = 0
+    neurons_per_hidden_layer = 0
+    agent = PantherNN(num_inputs=num_inputs, num_hidden_layers=num_hidden_layers, 
+                      neurons_per_hidden_layer=neurons_per_hidden_layer)  
 
     agent.set_weights(genome)
 
     env.reset()
 
     max_num_steps = 200
+    #max_num_steps = 10
 
     reward = 0
     obs = env._observation()
     for step_num in range(max_num_steps):
+        print("Step num", step_num)
         action = agent.getAction(obs)    
-        obs, r, done, _ = env.step(action)
+        obs, r, done, info = env.step(action)
         reward += r
-        if done:
-            print("Finished at step num:", step_num)
-            break
+        #if done:
+        #    break
 
+    print("Finished at step num:", step_num)
     print("Reward:", reward)
-    indv += 1
+    print("Status:", info['status'])
+    indv_num += 1
 
-    #Make a video
-    video_path = '/evo_run.mp4'
-    helper.make_video_plark_env(agent, env, video_path, n_steps=max_num_steps)
-
-    #video = io.open(video_path, 'r+b').read()
-    #encoded = base64.b64encode(video)
+    #if info['status'] == "PELICANWIN":
+    #    save_video(genome, agent, env, max_num_steps, file_name='pelican_win.mp4')
+    #if info['status'] == "ESCAPE":
+    #    save_video(genome, agent, env, max_num_steps, file_name='escape.mp4')
 
     return [reward]
-
-
-
 
 if __name__ == '__main__':
 
     #Instantiate the env
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/balanced_nn.json'
-    env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
-                            driving_agent='panther')
+    dummy_env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
+                               driving_agent='panther')
 
-    num_inputs = len(env._observation())
+    #num_inputs = len(dummy_env._observation())
+    num_inputs = 2
     num_hidden_layers = 0
     neurons_per_hidden_layer = 0
-    panther_agent = PantherNN(num_inputs=num_inputs, num_hidden_layers=num_hidden_layers, 
-                                neurons_per_hidden_layer=neurons_per_hidden_layer)  
-    num_weights = panther_agent.get_num_weights()
+    dummy_agent = PantherNN(num_inputs=num_inputs, num_hidden_layers=num_hidden_layers, 
+                            neurons_per_hidden_layer=neurons_per_hidden_layer)  
+    num_weights = dummy_agent.get_num_weights()
+
+    print("Num weights:", num_weights)
+
+    #new_weights = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    new_weights = [1.0, 2.0, 1.0, 2.0, 3.0, 4.0]
+    #new_weights = [1.0, 2.0, 3.0, -4.0, 5.0, -6.0, -1.0, 2.0, -2.0, 1.0, 1.0, 3.0]
+    dummy_agent.set_weights(new_weights)
+
+    dummy_agent.print_weights()
+
+    inputs = [2.0, 3.0]
+    output = dummy_agent._forward_pass(inputs)
+    print("Output:", output)
+
+    action = dummy_agent.getAction(inputs)
+    print("Action:", action)
+
+    exit()
 
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMax)
 
     toolbox = base.Toolbox()
-    toolbox.register("evaluate", evaluate, agent=panther_agent)
+    toolbox.register("evaluate", evaluate)
 
     #np.random.seed(108)
 
@@ -73,11 +107,16 @@ if __name__ == '__main__':
     init_sigma = 1.0
     #Number of children to produce at each generation
     #lambda_ = 20 * num_weights
-    lambda_ = 2
+    lambda_ = 4
     strategy = cma.Strategy(centroid=centroid, sigma=init_sigma, lambda_=lambda_)
 
     toolbox.register("generate", strategy.generate, creator.Individual)
     toolbox.register("update", strategy.update)
+
+    import multiprocessing
+
+    pool = multiprocessing.Pool()
+    toolbox.register("map", pool.map)
 
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -90,3 +129,6 @@ if __name__ == '__main__':
     num_gens = 1
     population, logbook = algorithms.eaGenerateUpdate(toolbox, ngen=num_gens, 
                                                       stats=stats, halloffame=hof)
+
+    #Save video of best agent
+    #save_video(hof[0], panther_agent, num_steps=200, file_name='best_agent.mp4')
