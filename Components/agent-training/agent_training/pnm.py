@@ -133,7 +133,7 @@ def train_agent(exp_path,
         model.learn(testing_interval)
         steps = steps + testing_interval
         if early_stopping:
-            victory_count, avg_reward = helper.check_victory(model, env, trials = 10)
+            victory_count, avg_reward = helper.check_victory(model, env, trials = 100)
             if victory_count > 7:
                 logger.info("Stopping training early")
                 break # Stopping training as winning
@@ -197,7 +197,7 @@ def run_pnm(exp_path,
                                   image_based = image_based,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = 3,
-                                  sparse = False,
+                                  sparse = True,
                                   vecenv = parallel)
     pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
     logger.info('Training initial pelican')
@@ -219,7 +219,7 @@ def run_pnm(exp_path,
                                   image_based = image_based,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = 3,
-                                  sparse = False,
+                                  sparse = True,
                                   vecenv = parallel)
     panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
     logger.info('Training initial panther')
@@ -259,7 +259,7 @@ def run_pnm(exp_path,
                                         payoffs,
                                         pelicans,
                                         panthers,
-                                        trials = 10)
+                                        trials = 1000)
         #logger.info("Memory allocated before: " + str(torch.cuda.memory_allocated()))
         #logger.info("Clearing GPU memory.")
         #del pelican_model
@@ -367,17 +367,17 @@ def main():
 
     run_pnm(exp_path,
             basicdate,
-            pelican_testing_interval = 100,
-            pelican_max_learning_steps = 100,
-            panther_testing_interval = 100,
-            panther_max_learning_steps = 100,
+            pelican_testing_interval = 1000,
+            pelican_max_learning_steps = 1000,
+            panther_testing_interval = 1000,
+            panther_max_learning_steps = 1000,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
-            retraining_prob = 1.0,
+            retraining_prob = .8,
             model_type = 'PPO', # 'PPO' instead of 'PPO2' since we are using torch version
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 2,
+            num_parallel_envs = 10,
             early_stopping = False)
 
 if __name__ == '__main__':
