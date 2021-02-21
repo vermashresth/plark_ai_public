@@ -377,6 +377,8 @@ def run_pnm(exp_path,
                                                                     previous_steps = panther_training_steps,
                                                                     parallel = parallel)
         panther_training_steps = panther_training_steps + steps
+
+        # Write to csv file
         df_path = os.path.join(exp_path, "values_iter_%02d.csv" % i)
         df.to_csv(df_path, index = False)
         print("==========================================")
