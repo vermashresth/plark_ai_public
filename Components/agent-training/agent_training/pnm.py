@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # PARAMS (in a config file later?
 
-PAYOFF_MATRIX_TRIALS = 1000
-MAX_ILLEGAL_MOVES_PER_TURN = 5
+PAYOFF_MATRIX_TRIALS = 100
+MAX_ILLEGAL_MOVES_PER_TURN = 2
 
 #######################################################################
 
@@ -300,22 +300,22 @@ def run_pnm(exp_path,
 
         # solve game for pelican
         (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
-        with np.printoptions(precision=3):
-            logger.info(mixture_pelicans)
+        # with np.printoptions(precision=3):
+        logger.info(mixture_pelicans)
         mixture_pelicans /= np.sum(mixture_pelicans)
-        with np.printoptions(precision=3):
-            logger.info("After normalisation:")
-            logger.info(mixture_pelicans)
+        # with np.printoptions(precision=3):
+        logger.info("After normalisation:")
+        logger.info(mixture_pelicans)
         np.save('%s/mixture_pelicans_%d.npy' % (pnm_logs_exp_path, i), mixture_pelicans)
 
         # solve game for panther
         (mixture_panthers, value_panthers) = lp_solve.solve_zero_sum_game(-payoffs.transpose())
-        with np.printoptions(precision=3):
-            logger.info(mixture_panthers)
+        # with np.printoptions(precision=3):
+        logger.info(mixture_panthers)
         mixture_panthers /= np.sum(mixture_panthers)
-        with np.printoptions(precision=3):
-            logger.info("After normalisation:")
-            logger.info(mixture_panthers)
+        # with np.printoptions(precision=3):
+        logger.info("After normalisation:")
+        logger.info(mixture_panthers)
         np.save('%s/mixture_panthers_%d.npy' % (pnm_logs_exp_path, i), mixture_panthers)
 
         # end of logging matrix game and solution
