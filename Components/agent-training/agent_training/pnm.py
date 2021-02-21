@@ -302,8 +302,12 @@ def run_pnm(exp_path,
 
         # Check if we found a stable NE, in that case we are done (and fitting DF)
         if i > 0:
+            # Both BR payoffs in terms of pelican payoff
             br_value_pelican = np.dot(mixture_pelicans, payoffs[-1, :-1])
-            br_value_panther = np.dot(mixture_panthers, -payoffs[:-1, -1])
+            br_value_panther = np.dot(mixture_panthers, payoffs[:-1, -1])
+            logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+            logger.info("Value of Game: %.3f, Pelican BR payoff: %.3f, Panther BR payoff: %.3f" % (value_pelicans, br_value_pelican, br_value_panther))
+            logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
             values = dict(zip(df_cols, [value_pelicans, br_value_pelican, br_value_panther]))
             df = df.append(values, ignore_index = True)
             if early_stopping and \
@@ -382,6 +386,7 @@ def run_pnm(exp_path,
         panther_training_steps = panther_training_steps + steps
 
         # Write to csv file
+        df_path =  os.path.join(exp_path, 'values_iter_%02d.csv' % i)
         df.to_csv(df_path, index = False)
         print("==========================================")
         print("WRITTEN DF TO CSV: %s" % df_path)
