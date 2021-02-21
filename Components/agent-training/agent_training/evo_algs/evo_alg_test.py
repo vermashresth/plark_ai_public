@@ -41,7 +41,7 @@ def evaluate(genome):
     reward = 0
     obs = env._observation()
     for step_num in range(max_num_steps):
-        print("Step num", step_num)
+        #print("Step num", step_num)
         action = agent.getAction(obs)    
         obs, r, done, info = env.step(action)
         reward += r
@@ -67,31 +67,12 @@ if __name__ == '__main__':
     dummy_env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
                                driving_agent='panther')
 
-    #num_inputs = len(dummy_env._observation())
-    num_inputs = 2
+    num_inputs = len(dummy_env._observation())
     num_hidden_layers = 0
     neurons_per_hidden_layer = 0
     dummy_agent = PantherNN(num_inputs=num_inputs, num_hidden_layers=num_hidden_layers, 
                             neurons_per_hidden_layer=neurons_per_hidden_layer)  
     num_weights = dummy_agent.get_num_weights()
-
-    print("Num weights:", num_weights)
-
-    #new_weights = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
-    new_weights = [1.0, 2.0, 1.0, 2.0, 3.0, 4.0]
-    #new_weights = [1.0, 2.0, 3.0, -4.0, 5.0, -6.0, -1.0, 2.0, -2.0, 1.0, 1.0, 3.0]
-    dummy_agent.set_weights(new_weights)
-
-    dummy_agent.print_weights()
-
-    inputs = [2.0, 3.0]
-    output = dummy_agent._forward_pass(inputs)
-    print("Output:", output)
-
-    action = dummy_agent.getAction(inputs)
-    print("Action:", action)
-
-    exit()
 
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMax)

@@ -21,7 +21,7 @@ class Environment():
         gm = Newgame(self.game_config, **kwargs)
         self.activeGames.append(gm)
         self.numberOfActiveGames = self.numberOfActiveGames + 1
-        logger.info('Game Created')
+        #logger.info('Game Created')
 
     # Stops all active games
     def stopAllGames(self):
@@ -34,7 +34,7 @@ class Environment():
                 default_config = os.path.join(os.path.dirname(__file__), '../game_config/10x10/balanced.json')
                 default_config = os.path.normpath(default_config)
                 config_file = default_config
-            logger.info('Opening config from:'+str(config_file))
+            #logger.info('Opening config from:'+str(config_file))
             with open(config_file) as f:
                 game_config = json.load(f)
                 return game_config
