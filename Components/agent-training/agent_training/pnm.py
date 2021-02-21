@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # PARAMS (in a config file later?)
 
-PAYOFF_MATRIX_TRIALS = 100
+PAYOFF_MATRIX_TRIALS = 50
 MAX_ILLEGAL_MOVES_PER_TURN = 2
 
 #######################################################################
@@ -252,11 +252,11 @@ def run_pnm(exp_path,
     pelicans = []
     panthers = []
     # Initialize old NE stuff for stopping criterion
-    value_pelicans = 0.
+    value_to_pelican = 0.
     mixture_pelicans = np.array([1.])
     mixture_panthers = np.array([1.])
     # Create DataFrame for plotting purposes
-    df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff"]
+    df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff", "Pelican_supp_size", "Panther_supp_size"]
     df = pd.DataFrame(columns = df_cols)
 
     # Train best responses until Nash equilibrium is found or max_iterations are reached
@@ -300,24 +300,45 @@ def run_pnm(exp_path,
         # save payoff matrix
         np.save('%s/payoffs_%d.npy' % (pnm_logs_exp_path, i), payoffs)
 
+        def get_support_size(mixture):
+            # return size of the support of mixed strategy mixture
+            return sum([1 if m > 0 else 0 for m in mixture])
+
         # Check if we found a stable NE, in that case we are done (and fitting DF)
         if i > 0:
-            # Both BR payoffs in terms of pelican payoff
+            # Both BR payoffs (from against last time's NE) in terms of pelican payoff
             br_value_pelican = np.dot(mixture_pelicans, payoffs[-1, :-1])
             br_value_panther = np.dot(mixture_panthers, payoffs[:-1, -1])
+
+            ssize_pelican = get_support_size(mixture_pelicans)
+            ssize_panther = get_support_size(mixture_panthers)
+
             logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-            logger.info("Value of Game: %.3f, Pelican BR payoff: %.3f, Panther BR payoff: %.3f" % (value_pelicans, br_value_pelican, br_value_panther))
+            logger.info("Value of Game: %.3f,\n\
+                         Pelican BR payoff: %.3f,\n\
+                         Panther BR payoff: %.3f,\n\
+                         Pelican Supp Size: %d,\n\
+                         Panther Supp Size: %d,\n" % (value_to_pelican, 
+                                                      br_value_pelican, 
+                                                      br_value_panther,
+                                                      ssize_pelican,
+                                                      ssize_panther
+                                                      ))
             logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-            values = dict(zip(df_cols, [value_pelicans, br_value_pelican, br_value_panther]))
+            values = dict(zip(df_cols, [value_to_pelican, br_value_pelican, 
+                                                          br_value_panther, 
+                                                          ssize_pelican, 
+                                                          ssize_panther]))
             df = df.append(values, ignore_index = True)
-            if early_stopping and \
-                    abs(br_value_pelican - value_pelicans) < stopping_eps and\
-                    abs(br_value_panther - value_pelicans) < stopping_eps:
+            # here value_to_pelican is from the last time the subgame was solved
+            if early_stopping and\
+                    abs(br_value_pelican - value_to_pelican) < stopping_eps and\
+                    abs(br_value_panther - value_to_pelican) < stopping_eps:
                 print('Stable Nash Equilibrium found')
                 break
 
         # solve game for pelican
-        (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
+        (mixture_pelicans, value_to_pelican) = lp_solve.solve_zero_sum_game(payoffs)
         # with np.printoptions(precision=3):
         logger.info(mixture_pelicans)
         mixture_pelicans /= np.sum(mixture_pelicans)
@@ -435,7 +456,7 @@ def main():
             model_type = 'PPO', # 'PPO' instead of 'PPO2' since we are using torch version
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 5,
+            num_parallel_envs = 7,
             early_stopping = False)
 
 if __name__ == '__main__':
