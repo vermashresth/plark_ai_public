@@ -55,7 +55,7 @@ class Observation():
                 self.panther_row = 0 
 
 
-                logger.info('non-image observation space')
+                #logger.info('non-image observation space')
                 obs_shape = []
                 obs_label = [] 
 

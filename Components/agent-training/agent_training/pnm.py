@@ -16,9 +16,9 @@ import glob
 from tensorboardX import SummaryWriter
 import helper
 import lp_solve
-import tensorflow as tf
 import torch
-        
+import matplotlib.pyplot as plt
+
 # -
 
 import tensorflow as tf
@@ -27,6 +27,17 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+#######################################################################
+# PARAMS (in a config file later?)
+
+PAYOFF_MATRIX_TRIALS = 50
+MAX_ILLEGAL_MOVES_PER_TURN = 2
+
+#######################################################################
+def get_fig(df):
+    fig, (ax1,ax2) = plt.subplots(nrows=2, ncols=1, sharex=True)
+    df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax=ax1)
+    df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind='bar', ax=ax2)
 
 def compute_payoff_matrix(pelican,
                           panther,
@@ -36,7 +47,15 @@ def compute_payoff_matrix(pelican,
                           pelicans,
                           panthers,
                           trials = 1000):
-    
+    """
+    CHECK:
+
+    - Pelican strategies are rows; panthers are columns
+    - Payoffs are all to the panther though ?? 
+      If so then we solving game wrong presumably?
+
+    """
+
     # Resizing the payoff matrix for new strategies
     payoffs = np.pad(payoffs,
                      [(0, len(pelicans) - payoffs.shape[0]),
@@ -77,11 +96,10 @@ def train_agent_against_mixture(driving_agent,
     
     # If we use parallel envs, we run all the training against different sampled opponents in parallel
     if parallel:
-        
         # Method to load new opponents via filepath
         setter = 'set_panther_using_path' if driving_agent == 'pelican' else 'set_pelican_using_path'
         for i, opponent in enumerate(opponents):
-            env.env_method(setter, opponent, indices=[i])
+            env.env_method(setter, opponent, indices = [i])
         
         agent_filepath, new_steps = train_agent(exp_path,
                                                 model,
@@ -101,7 +119,7 @@ def train_agent_against_mixture(driving_agent,
                 env.set_panther_using_path(opponent)
             else:
                 env.set_pelican_using_path(opponent)
-                        
+
             agent_filepath, new_steps = train_agent(exp_path,
                                                     model,
                                                     env,
@@ -112,7 +130,7 @@ def train_agent_against_mixture(driving_agent,
                                                     early_stopping = True,
                                                     previous_steps = previous_steps)
             previous_steps += new_steps
-    
+
     return agent_filepath, new_steps
 
 def train_agent(exp_path,
@@ -196,7 +214,7 @@ def run_pnm(exp_path,
                                   num_envs = num_parallel_envs,
                                   image_based = image_based,
                                   random_panther_start_position = True,
-                                  max_illegal_moves_per_turn = 3,
+                                  max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
                                   sparse = True,
                                   vecenv = parallel)
     pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
@@ -218,7 +236,7 @@ def run_pnm(exp_path,
                                   num_envs = num_parallel_envs,
                                   image_based = image_based,
                                   random_panther_start_position = True,
-                                  max_illegal_moves_per_turn = 3,
+                                  max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
                                   sparse = True,
                                   vecenv = parallel)
     panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
@@ -238,14 +256,21 @@ def run_pnm(exp_path,
     payoffs = np.zeros((1, 1))
     pelicans = []
     panthers = []
+    # Initialize old NE stuff for stopping criterion
+    value_to_pelican = 0.
+    mixture_pelicans = np.array([1.])
+    mixture_panthers = np.array([1.])
     # Create DataFrame for plotting purposes
-    df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff"]
+    df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff", "Pelican_supp_size", "Panther_supp_size"]
     df = pd.DataFrame(columns = df_cols)
 
     # Train best responses until Nash equilibrium is found or max_iterations are reached
     logger.info('Parallel Nash Memory (PNM)')
     for i in range(max_pnm_iterations):
+        logger.info("*********************************************************")
         logger.info('PNM iteration ' + str(i + 1) + ' of ' + str(max_pnm_iterations))
+        logger.info("*********************************************************")
+
         pelicans.append(pelican_agent_filepath)
         panthers.append(panther_agent_filepath)
 
@@ -259,7 +284,8 @@ def run_pnm(exp_path,
                                         payoffs,
                                         pelicans,
                                         panthers,
-                                        trials = 1000)
+                                        trials = PAYOFF_MATRIX_TRIALS)
+
         #logger.info("Memory allocated before: " + str(torch.cuda.memory_allocated()))
         #logger.info("Clearing GPU memory.")
         #del pelican_model
@@ -267,31 +293,96 @@ def run_pnm(exp_path,
         #gc.collect()
         #torch.cuda.empty_cache()
         #logger.info("Memory allocated after: " + str(torch.cuda.memory_allocated()))
-        logger.info(payoffs)
+
+        logger.info("=================================================")
+        logger.info("New matrix game:")
+        logger.info("As numpy array:")
+        logger.info('\n' + str(payoffs))
+        logger.info("As dataframe:")
+        tmp_df = pd.DataFrame(payoffs).rename_axis('Pelican', axis = 0).rename_axis('Panther', axis = 1)
+        logger.info('\n' + str(tmp_df))
+
+        # save payoff matrix
         np.save('%s/payoffs_%d.npy' % (pnm_logs_exp_path, i), payoffs)
-        (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
+
+        def get_support_size(mixture):
+            # return size of the support of mixed strategy mixture
+            return sum([1 if m > 0 else 0 for m in mixture])
+
+        # Check if we found a stable NE, in that case we are done (and fitting DF)
+        if i > 0:
+            # Both BR payoffs (from against last time's NE) in terms of pelican payoff
+            br_value_pelican = np.dot(mixture_pelicans, payoffs[-1, :-1])
+            br_value_panther = np.dot(mixture_panthers, payoffs[:-1, -1])
+
+            ssize_pelican = get_support_size(mixture_pelicans)
+            ssize_panther = get_support_size(mixture_panthers)
+
+            logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+            logger.info("\n\
+                         Pelican BR payoff: %.3f,\n\
+                         Value of Game: %.3f,\n\
+                         Panther BR payoff: %.3f,\n\
+                         Pelican Supp Size: %d,\n\
+                         Panther Supp Size: %d,\n" % (
+                                                      br_value_pelican, 
+                                                      value_to_pelican, 
+                                                      br_value_panther,
+                                                      ssize_pelican,
+                                                      ssize_panther
+                                                      ))
+            logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+            values = dict(zip(df_cols, [value_to_pelican, br_value_pelican, 
+                                                          br_value_panther, 
+                                                          ssize_pelican, 
+                                                          ssize_panther]))
+            df = df.append(values, ignore_index = True)
+
+            # Write to csv file
+            df_path =  os.path.join(exp_path, 'values_iter_%02d.csv' % i)
+            df.to_csv(df_path, index = False)
+            get_fig(df)
+            fig_path = os.path.join(exp_path, 'values_iter_%02d.pdf' % i) 
+            plt.savefig(fig_path)
+            print("==========================================")
+            print("WRITTEN DF TO CSV: %s" % df_path)
+            print("==========================================")
+
+            # here value_to_pelican is from the last time the subgame was solved
+            if early_stopping and\
+                    abs(br_value_pelican - value_to_pelican) < stopping_eps and\
+                    abs(br_value_panther - value_to_pelican) < stopping_eps:
+                print('Stable Nash Equilibrium found')
+                break
+
+        # solve game for pelican
+        (mixture_pelicans, value_to_pelican) = lp_solve.solve_zero_sum_game(payoffs)
+        # with np.printoptions(precision=3):
+        logger.info(mixture_pelicans)
         mixture_pelicans /= np.sum(mixture_pelicans)
+        # with np.printoptions(precision=3):
+        logger.info("After normalisation:")
         logger.info(mixture_pelicans)
         np.save('%s/mixture_pelicans_%d.npy' % (pnm_logs_exp_path, i), mixture_pelicans)
+
+        # solve game for panther
         (mixture_panthers, value_panthers) = lp_solve.solve_zero_sum_game(-payoffs.transpose())
+        # with np.printoptions(precision=3):
+        logger.info(mixture_panthers)
         mixture_panthers /= np.sum(mixture_panthers)
+        # with np.printoptions(precision=3):
+        logger.info("After normalisation:")
         logger.info(mixture_panthers)
         np.save('%s/mixture_panthers_%d.npy' % (pnm_logs_exp_path, i), mixture_panthers)
 
-        # Check if we found a stable NE, in that case we are done (and fitting DF)
-        br_value_pelican = np.dot(mixture_pelicans, payoffs[-1])
-        br_value_panther = np.dot(mixture_panthers, -payoffs[:, -1])
-        values = dict(zip(df_cols, [value_pelicans, br_value_pelican, br_value_panther]))
-        df = df.append(values, ignore_index = True)
-        if early_stopping and i > 0 and abs(br_value_pelican - value_pelicans) < stopping_eps and abs(br_value_panther - value_panthers) < stopping_eps:
-            print('Stable Nash Equilibrium found')
-            break
+        # end of logging matrix game and solution
+        logger.info("=================================================")
 
         # Train from skratch or retrain an existing model for pelican
         logger.info('Training pelican')
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
-            path = glob.glob(path+"/*.zip")[0]
+            path = glob.glob(path + "/*.zip")[0]
             pelican_model = helper.loadAgent(path, pelican_model_type)
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
@@ -314,7 +405,7 @@ def run_pnm(exp_path,
         logger.info('Training panther')
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
-            path = glob.glob(path+"/*.zip")[0]
+            path = glob.glob(path + "/*.zip")[0]
             panther_model = helper.loadAgent(path, panther_model_type)
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
@@ -332,7 +423,6 @@ def run_pnm(exp_path,
                                                                     previous_steps = panther_training_steps,
                                                                     parallel = parallel)
         panther_training_steps = panther_training_steps + steps
-
         
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))

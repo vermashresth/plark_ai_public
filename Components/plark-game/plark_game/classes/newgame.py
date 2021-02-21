@@ -199,7 +199,7 @@ class Newgame():
                                 self.illegal_panther_move = True
                                 self.panther_illegal_move_streak += 1
                                 if self.panther_illegal_move_streak >= self.max_illegal_moves_per_turn:
-                                        logger.warning("Too many illegal moves ({}). Ending panther turn...".format(self.panther_illegal_move_streak))
+                                        #logger.warning("Too many illegal moves ({}). Ending panther turn...".format(self.panther_illegal_move_streak))
                                         self.panther_move_in_turn = self.panther_parameters['move_limit']
                                 self.update_status_bar('Illegal panther move : Moving outside of game map', 'red')
 
@@ -208,7 +208,7 @@ class Newgame():
                 self.pelican_illegal_move_streak += 1
                 self.update_status_bar('Illegal pelican move : {}'.format(reason), 'red')
                 if self.pelican_illegal_move_streak >= self.max_illegal_moves_per_turn:
-                        logger.warning("Too many illegal moves ({}). Ending pelican turn...".format(self.pelican_illegal_move_streak))
+                        #logger.warning("Too many illegal moves ({}). Ending pelican turn...".format(self.pelican_illegal_move_streak))
                         self.pelican_move_in_turn = self.pelican_parameters['move_limit']
 
                 
@@ -432,7 +432,7 @@ class Newgame():
                         self.pelicanPlayer.addSonoBouyToPayload(s)
 
         def load_configurations(self, game_config, **kwargs):
-                logger.info('kwargs: '+str(kwargs))
+                #logger.info('kwargs: '+str(kwargs))
 
                 # Game settings
                 self.maxTurns = kwargs.get('maximum_turns', game_config['game_settings']['maximum_turns'])
@@ -506,7 +506,7 @@ class Newgame():
                                 oldpath, sys.path[:] = sys.path[:], [relative_basic_agents_filepath]
 
                                 try:
-                                        logger.info('Opening agent from:'+relative_basic_agents_filepath+'/'+str(agent))
+                                        #logger.info('Opening agent from:'+relative_basic_agents_filepath+'/'+str(agent))
                                         module = __import__(agent[:-3])
         
                                 except ImportError as err:
@@ -558,7 +558,7 @@ class Newgame():
             agent_filepath = glob.glob(file_path+"/*.zip")[0]
             with open(metadata_filepath) as f:
                 metadata = json.load(f)
-            logger.info('Playing against:'+agent_filepath)  
+            #logger.info('Playing against:'+agent_filepath)  
             kwargs = {}
             kwargs['driving_agent'] = metadata['agentplayer'] 
             if image_based == False:
@@ -570,7 +570,7 @@ class Newgame():
             agent_filepath = glob.glob(file_path+"/*.zip")[0]
             with open(metadata_filepath) as f:
                 metadata = json.load(f)
-            logger.info('Playing against:'+agent_filepath)  
+            #logger.info('Playing against:'+agent_filepath)  
             kwargs = {}
             kwargs['driving_agent'] = metadata['agentplayer']
             if image_based == False:
@@ -587,7 +587,7 @@ def load_agent(file_path, agent_name,basic_agents_filepath,game,**kwargs):
                         except ImportError as err:
                                 raise ValueError("Couldn't import " + file_path, ' - ', err)
                         cls = getattr(module, agent_name)
-                        logger.info('Playing against:'+agent_name)
+                        #logger.info('Playing against:'+agent_name)
                         # always restore the real path
                         sys.path[:] = oldpath
                         return cls()    
@@ -605,7 +605,7 @@ def load_agent(file_path, agent_name,basic_agents_filepath,game,**kwargs):
 
                                 with open(metadata_filepath) as f:
                                         metadata = json.load(f)
-                                logger.info('Playing against:'+agent_filepath)  
+                                #logger.info('Playing against:'+agent_filepath)  
 
                                 observation = None
                                 image_based = True 

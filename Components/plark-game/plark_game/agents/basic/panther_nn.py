@@ -1,6 +1,6 @@
 from plark_game.classes.pantherAgent import *
-import tensorflow as tf
 import numpy as np
+import torch
 
 class PantherNN(Panther_Agent):
 
@@ -10,60 +10,38 @@ class PantherNN(Panther_Agent):
         self.num_hidden_layers = num_hidden_layers
         self.neurons_per_hidden_layer = neurons_per_hidden_layer
 
-        tf.random.set_random_seed(5)
-
         #Build neural net
         self._build_nn()
 
-        #Start tf session
-        self.sess = tf.Session()
-        init = tf.global_variables_initializer()
-        self.sess.run(init)
-
     def _build_nn(self):
 
-        #Network inputs
-        self.X = tf.placeholder("float", [1, self.num_inputs])
-
-        #Initialise weights and biases
-        self.weights = [] 
-        self.biases = []
+        layers = []
 
         if self.num_hidden_layers == 0:
-            self.weights.append(tf.Variable(tf.random_normal([self.num_inputs, 
-                                                              self.num_outputs])))
-            self.biases.append(tf.Variable(tf.random_normal([self.num_outputs])))
+            layers.append(torch.nn.Linear(self.num_inputs, self.num_outputs))
 
         else:
-            self.weights.append(tf.Variable(tf.random_normal([self.num_inputs, 
-                                                              self.neurons_per_hidden_layer])))
-            self.biases.append(tf.Variable(tf.random_normal([self.neurons_per_hidden_layer])))
+            layers.append(torch.nn.Linear(self.num_inputs, self.neurons_per_hidden_layer))
+            #Hidden layers have ReLU activation
+            layers.append(torch.nn.ReLU())
 
             for i in range(self.num_hidden_layers-1):
-                self.weights.append(
-                    tf.Variable(tf.random_normal([self.neurons_per_hidden_layer, 
-                                                  self.neurons_per_hidden_layer]))
-                )
-                self.biases.append(
-                    tf.Variable(tf.random_normal([self.neurons_per_hidden_layer]))
-                )
+                layers.append(torch.nn.Linear(self.neurons_per_hidden_layer,
+                                              self.neurons_per_hidden_layer))
+                layers.append(torch.ReLU())
 
-            self.weights.append(tf.Variable(tf.random_normal([self.neurons_per_hidden_layer, 
-                                                              self.num_outputs])))
-            self.biases.append(tf.Variable(tf.random_normal([self.num_outputs])))
+            layers.append(torch.nn.Linear(self.neurons_per_hidden_layer, self.num_outputs))
 
+        #Final layer goes through a softmax
+        layers.append(torch.nn.Softmax(dim=0))
+
+        self.nn = torch.nn.Sequential(*layers)
+
+    #Takes a list, passes through the network and returns a list
     def _forward_pass(self, x):
-        out = x
-        for i in range(len(self.weights)):
-            out = tf.add(tf.matmul(out, self.weights[i]), self.biases[i])
-            #Add ReLU to all hidden layers
-            if i < (len(self.weights)-1):
-                out = tf.nn.relu(out)
-            #Add softmax to the output layer
-            else:
-                out = tf.nn.softmax(out)
-
-        return out
+        x = torch.tensor(x, dtype=torch.float64)
+        net_out = self.nn.forward(x)
+        return net_out.tolist()
     
     #Randomly sample action from network output probability distribution
     def _sample_action(self, net_out):
@@ -78,32 +56,34 @@ class PantherNN(Panther_Agent):
         assert len(state) == self.num_inputs, "State length: {}, num inputs: {}" \
             .format(len(state), self.num_inputs)
 
-        net_out = self.sess.run(self._forward_pass(self.X), feed_dict={self.X: [state]})
+        #Push state through network
+        net_out = self._forward_pass(state)
 
-        #action = self._get_most_probable_action(net_out[0])
-        action = self._sample_action(net_out[0])
+        #Get action from nework output
+        #action = self._get_most_probable_action(net_out)
+        action = self._sample_action(net_out)
 
         return action
 
-    #Returns the number of weights and biases
+    #Returns the number of weights
     def get_num_weights(self):
         num_weights = 0
-        for layer_weights in self.weights:
-            num_weights += self.sess.run(tf.size(layer_weights))
-        for layer_biases in self.biases:
-            num_weights += self.sess.run(tf.size(layer_biases))
+        for layer in self.nn:
+            for params in layer.parameters():
+                #num_weights += np.prod(params.size())
+                num_weights += params.numel()
         return num_weights
 
     def print_weights(self):
-        for i in range(len(self.weights)):
-            self.sess.run(tf.print(self.weights[i], summarize=-1))
-            self.sess.run(tf.print(self.biases[i], summarize=-1))
+        for layer in self.nn:
+            for params in layer.parameters():
+                print(params)
 
     def _set_weights_err_msg(self, weights_len, num_weights_required):
         return "Trying to set {} weights to an NN that requires {} weights" \
             .format(weights_len, num_weights_required)
 
-    #Sets a list of weights and biases
+    #Sets a list of weights
     def set_weights(self, new_weights):
 
         #Check new weights is of correct size
@@ -112,38 +92,24 @@ class PantherNN(Panther_Agent):
                                        self._set_weights_err_msg(len(new_weights), \
                                                                  num_weights_required)
 
-        #Set weights and biases layer by layer
-        index = 0
-        for i in range(len(self.weights)):
+        weight_index = 0
+        for layer in self.nn:
+            for params in layer.parameters():
 
-            #Slice out new weights
-            w_size = self.sess.run(tf.size(self.weights[i]))
-            layer_weights = new_weights[index:index+w_size]
-            index += w_size
+                #Slice out new weights
+                p_weights = new_weights[weight_index : weight_index + params.numel()] 
+                weight_index += params.numel()
 
-            #Resize and set new weights
-            w_shape = self.sess.run(tf.shape(self.weights[i]))
-            self.weights[i] = tf.Variable(np.reshape(layer_weights, w_shape), dtype='float32')
+                #Resize and set new weights
+                params.data = torch.tensor(np.reshape(p_weights, params.size()), \
+                                           dtype=torch.float64)
 
-            #Slice out new biases
-            b_size = self.sess.run(tf.size(self.biases[i]))
-            layer_biases = new_weights[index:index+b_size]
-            index += b_size
-
-            #Set new biases
-            self.biases[i] = tf.Variable(layer_biases, dtype='float32')
-
-        #Reinitiaise variables
-        init = tf.global_variables_initializer()
-        self.sess.run(init)
-
-    #Return weights and biases as a 1d list for optimisation rather than as tensors 
+    #Return weights as a 1d list for optimisation rather than as tensors 
     def get_weights(self):
         weights = []
-
-        for i in range(len(self.weights)):
-            flattened_weights = self.sess.run(tf.reshape(self.weights[i], [-1])) 
-            weights += flattened_weights.tolist()
-            weights += self.sess.run(self.biases[i]).tolist()
-
+        for layer in self.nn:
+            for params in layer.parameters():
+                weights += params.flatten().tolist()
         return weights
+                
+
