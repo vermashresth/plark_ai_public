@@ -381,7 +381,7 @@ def run_pnm(exp_path,
                                                                     parallel = parallel)
         panther_training_steps = panther_training_steps + steps
 
-        df_path = os.path.join(pnm_logs_exp_path, "values_iter_%02d.csv" % i)
+        # Write to csv file
         df.to_csv(df_path, index = False)
         print("==========================================")
         print("WRITTEN DF TO CSV: %s" % df_path)
