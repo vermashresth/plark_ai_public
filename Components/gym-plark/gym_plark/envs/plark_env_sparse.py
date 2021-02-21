@@ -44,7 +44,7 @@ class PlarkEnvSparse(PlarkEnv):
                 #  BINGO      = Panther has won, Pelican has reached it's turn limit and run out of fuel
                 #  WINCHESTER = Panther has won, All torpedoes dropped and stopped running. Panther can't be stopped
                 if self.status in ["ESCAPE", "BINGO", "WINCHESTER", "PELICANWIN"]:
-                        print("Ending status:", self.status)
+                        #print("Ending status:", self.status)
                         done = True
                         if self.verbose:
                                 logger.info("GAME STATE IS " + self.status)

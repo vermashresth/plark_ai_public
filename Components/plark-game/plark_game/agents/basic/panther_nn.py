@@ -6,8 +6,7 @@ class PantherNN(Panther_Agent):
 
     def __init__(self, num_inputs, num_hidden_layers=0, neurons_per_hidden_layer=0):
         self.num_inputs = num_inputs
-        #self.num_outputs = len(ACTION_LOOKUP) 
-        self.num_outputs = 2
+        self.num_outputs = len(ACTION_LOOKUP) 
         self.num_hidden_layers = num_hidden_layers
         self.neurons_per_hidden_layer = neurons_per_hidden_layer
 

@@ -11,5 +11,5 @@ ACTION_LOOKUP = {
     3 : '4',  # Down
     4 : '5',  # Down left
     5 : '6',  # Up left
-	6 : 'end'
+    6 : 'end'
 }
