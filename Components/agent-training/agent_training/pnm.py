@@ -27,6 +27,13 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+#######################################################################
+# PARAMS (in a config file later?
+
+PAYOFF_MATRIX_TRIALS = 100
+MAX_ILLEGAL_MOVES_PER_TURN = 2
+
+#######################################################################
 
 def compute_payoff_matrix(pelican,
                           panther,
@@ -36,7 +43,15 @@ def compute_payoff_matrix(pelican,
                           pelicans,
                           panthers,
                           trials = 1000):
-    
+    """
+    CHECK:
+
+    - Pelican strategies are rows; panthers are columns
+    - Payoffs are all to the panther though ?? 
+      If so then we solving game wrong presumably?
+
+    """
+ 
     # Resizing the payoff matrix for new strategies
     payoffs = np.pad(payoffs,
                      [(0, len(pelicans) - payoffs.shape[0]),
@@ -196,7 +211,7 @@ def run_pnm(exp_path,
                                   num_envs = num_parallel_envs,
                                   image_based = image_based,
                                   random_panther_start_position = True,
-                                  max_illegal_moves_per_turn = 3,
+                                  max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
                                   sparse = False,
                                   vecenv = parallel)
     pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
@@ -218,7 +233,7 @@ def run_pnm(exp_path,
                                   num_envs = num_parallel_envs,
                                   image_based = image_based,
                                   random_panther_start_position = True,
-                                  max_illegal_moves_per_turn = 3,
+                                  max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
                                   sparse = False,
                                   vecenv = parallel)
     panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
@@ -245,7 +260,11 @@ def run_pnm(exp_path,
     # Train best responses until Nash equilibrium is found or max_iterations are reached
     logger.info('Parallel Nash Memory (PNM)')
     for i in range(max_pnm_iterations):
+
+        logger.info("*********************************************************")
         logger.info('PNM iteration ' + str(i + 1) + ' of ' + str(max_pnm_iterations))
+        logger.info("*********************************************************")
+
         pelicans.append(pelican_agent_filepath)
         panthers.append(panther_agent_filepath)
 
@@ -259,7 +278,7 @@ def run_pnm(exp_path,
                                         payoffs,
                                         pelicans,
                                         panthers,
-                                        trials = 10)
+                                        trials = PAYOFF_MATRIX_TRIALS)
         #logger.info("Memory allocated before: " + str(torch.cuda.memory_allocated()))
         #logger.info("Clearing GPU memory.")
         #del pelican_model
@@ -267,23 +286,49 @@ def run_pnm(exp_path,
         #gc.collect()
         #torch.cuda.empty_cache()
         #logger.info("Memory allocated after: " + str(torch.cuda.memory_allocated()))
-        logger.info(payoffs)
+
+        logger.info("=================================================")
+        logger.info("New matrix game:")
+        logger.info("As numpy array:")
+        logger.info('\n' + str(payoffs))
+        logger.info("As dataframe:")
+        tmp_df = pd.DataFrame(payoffs).rename_axis('Pelican', axis=0).rename_axis('Panther', axis=1)
+        logger.info('\n' + str(tmp_df))
+
+        # save payoff matrix
         np.save('%s/payoffs_%d.npy' % (pnm_logs_exp_path, i), payoffs)
+
+        # solve game for pelican
         (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
+        # with np.printoptions(precision=3):
+        logger.info(mixture_pelicans)
         mixture_pelicans /= np.sum(mixture_pelicans)
+        # with np.printoptions(precision=3):
+        logger.info("After normalisation:")
         logger.info(mixture_pelicans)
         np.save('%s/mixture_pelicans_%d.npy' % (pnm_logs_exp_path, i), mixture_pelicans)
+
+        # solve game for panther
         (mixture_panthers, value_panthers) = lp_solve.solve_zero_sum_game(-payoffs.transpose())
+        # with np.printoptions(precision=3):
+        logger.info(mixture_panthers)
         mixture_panthers /= np.sum(mixture_panthers)
+        # with np.printoptions(precision=3):
+        logger.info("After normalisation:")
         logger.info(mixture_panthers)
         np.save('%s/mixture_panthers_%d.npy' % (pnm_logs_exp_path, i), mixture_panthers)
+
+        # end of logging matrix game and solution
+        logger.info("=================================================")
 
         # Check if we found a stable NE, in that case we are done (and fitting DF)
         br_value_pelican = np.dot(mixture_pelicans, payoffs[-1])
         br_value_panther = np.dot(mixture_panthers, -payoffs[:, -1])
         values = dict(zip(df_cols, [value_pelicans, br_value_pelican, br_value_panther]))
         df = df.append(values, ignore_index = True)
-        if early_stopping and i > 0 and abs(br_value_pelican - value_pelicans) < stopping_eps and abs(br_value_panther - value_panthers) < stopping_eps:
+        if early_stopping and i > 0 and \
+                abs(br_value_pelican - value_pelicans) < stopping_eps and\
+                abs(br_value_panther - value_panthers) < stopping_eps:
             print('Stable Nash Equilibrium found')
             break
 
@@ -332,7 +377,11 @@ def run_pnm(exp_path,
                                                                     previous_steps = panther_training_steps,
                                                                     parallel = parallel)
         panther_training_steps = panther_training_steps + steps
-
+        df_path = os.path.join(exp_path, "values_iter_%02d.csv" % i)
+        df.to_csv(df_path, index = False)
+        print("==========================================")
+        print("WRITTEN DF TO CSV: %s" % df_path)
+        print("==========================================")
         
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))
@@ -377,7 +426,7 @@ def main():
             model_type = 'PPO', # 'PPO' instead of 'PPO2' since we are using torch version
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 2,
+            num_parallel_envs = 5,
             early_stopping = False)
 
 if __name__ == '__main__':

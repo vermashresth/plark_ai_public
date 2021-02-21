@@ -85,10 +85,18 @@ def check_victory(model,env,trials = 10):
         list_of_reward, n_steps, victories = evaluate_policy_torch(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
     else: 
         list_of_reward, n_steps, victories = evaluate_policy(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
+
+    logger.info("===================================================")
+    modelplayer = env.get_attr('driving_agent')[0]
+    logger.info('In check_victory, driving_agent: %s' % modelplayer)
+
     victory_count = len([v for v in victories if v == True])
-    logger.info('victory_count = '+ str(victory_count))        
+    logger.info('victory_count = %s out of %s' % (victory_count, len(victories))        )
     avg_reward = float(sum(list_of_reward))/len(list_of_reward)
-    logger.info('avg_reward = '+ str(avg_reward))        
+    logger.info('avg_reward = %.3f' % avg_reward)        
+
+    logger.info("===================================================")
+
     return victory_count, avg_reward
 
 def evaluate_policy_torch(model, env, n_eval_episodes=4, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False):
@@ -102,6 +110,11 @@ def evaluate_policy_torch(model, env, n_eval_episodes=4, deterministic=True, ren
     episodes_reward = [0.0 for _ in range(env.num_envs)]
     episodes_len = [0.0 for _ in range(env.num_envs)]
     state = None
+
+    logger.debug("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+    logger.debug("In evaluate_policy_torch, n_eval_episodes: %s" % n_eval_episodes)
+    logger.debug("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+
     while len(episode_rewards) < n_eval_episodes:
         action, state = model.predict(obs, state=state, deterministic=deterministic)
         obs, rewards, dones, _infos = env.step(action)
