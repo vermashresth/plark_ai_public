@@ -17,7 +17,8 @@ from tensorboardX import SummaryWriter
 import helper
 import lp_solve
 import torch
-        
+import matplotlib.pyplot as plt
+
 # -
 
 import tensorflow as tf
@@ -33,6 +34,10 @@ PAYOFF_MATRIX_TRIALS = 50
 MAX_ILLEGAL_MOVES_PER_TURN = 2
 
 #######################################################################
+def get_fig(df):
+    fig, (ax1,ax2) = plt.subplots(nrows=2, ncols=1, sharex=True)
+    df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax=ax1)
+    df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind='bar', ax=ax2)
 
 def compute_payoff_matrix(pelican,
                           panther,
@@ -314,12 +319,14 @@ def run_pnm(exp_path,
             ssize_panther = get_support_size(mixture_panthers)
 
             logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-            logger.info("Value of Game: %.3f,\n\
+            logger.info("\n\
                          Pelican BR payoff: %.3f,\n\
+                         Value of Game: %.3f,\n\
                          Panther BR payoff: %.3f,\n\
                          Pelican Supp Size: %d,\n\
-                         Panther Supp Size: %d,\n" % (value_to_pelican, 
+                         Panther Supp Size: %d,\n" % (
                                                       br_value_pelican, 
+                                                      value_to_pelican, 
                                                       br_value_panther,
                                                       ssize_pelican,
                                                       ssize_panther
@@ -330,6 +337,17 @@ def run_pnm(exp_path,
                                                           ssize_pelican, 
                                                           ssize_panther]))
             df = df.append(values, ignore_index = True)
+
+            # Write to csv file
+            df_path =  os.path.join(exp_path, 'values_iter_%02d.csv' % i)
+            df.to_csv(df_path, index = False)
+            get_fig(df)
+            fig_path = os.path.join(exp_path, 'values_iter_%02d.pdf' % i) 
+            plt.savefig(fig_path)
+            print("==========================================")
+            print("WRITTEN DF TO CSV: %s" % df_path)
+            print("==========================================")
+
             # here value_to_pelican is from the last time the subgame was solved
             if early_stopping and\
                     abs(br_value_pelican - value_to_pelican) < stopping_eps and\
@@ -405,13 +423,6 @@ def run_pnm(exp_path,
                                                                     previous_steps = panther_training_steps,
                                                                     parallel = parallel)
         panther_training_steps = panther_training_steps + steps
-
-        # Write to csv file
-        df_path =  os.path.join(exp_path, 'values_iter_%02d.csv' % i)
-        df.to_csv(df_path, index = False)
-        print("==========================================")
-        print("WRITTEN DF TO CSV: %s" % df_path)
-        print("==========================================")
         
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))
