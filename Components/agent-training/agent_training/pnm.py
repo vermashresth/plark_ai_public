@@ -16,7 +16,6 @@ import glob
 from tensorboardX import SummaryWriter
 import helper
 import lp_solve
-import tensorflow as tf
 import torch
         
 # -
@@ -28,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 #######################################################################
-# PARAMS (in a config file later?
+# PARAMS (in a config file later?)
 
 PAYOFF_MATRIX_TRIALS = 100
 MAX_ILLEGAL_MOVES_PER_TURN = 2
@@ -51,7 +50,7 @@ def compute_payoff_matrix(pelican,
       If so then we solving game wrong presumably?
 
     """
- 
+
     # Resizing the payoff matrix for new strategies
     payoffs = np.pad(payoffs,
                      [(0, len(pelicans) - payoffs.shape[0]),
@@ -92,11 +91,10 @@ def train_agent_against_mixture(driving_agent,
     
     # If we use parallel envs, we run all the training against different sampled opponents in parallel
     if parallel:
-        
         # Method to load new opponents via filepath
         setter = 'set_panther_using_path' if driving_agent == 'pelican' else 'set_pelican_using_path'
         for i, opponent in enumerate(opponents):
-            env.env_method(setter, opponent, indices=[i])
+            env.env_method(setter, opponent, indices = [i])
         
         agent_filepath, new_steps = train_agent(exp_path,
                                                 model,
@@ -116,7 +114,7 @@ def train_agent_against_mixture(driving_agent,
                 env.set_panther_using_path(opponent)
             else:
                 env.set_pelican_using_path(opponent)
-                        
+
             agent_filepath, new_steps = train_agent(exp_path,
                                                     model,
                                                     env,
@@ -127,7 +125,7 @@ def train_agent_against_mixture(driving_agent,
                                                     early_stopping = True,
                                                     previous_steps = previous_steps)
             previous_steps += new_steps
-    
+
     return agent_filepath, new_steps
 
 def train_agent(exp_path,
@@ -253,6 +251,10 @@ def run_pnm(exp_path,
     payoffs = np.zeros((1, 1))
     pelicans = []
     panthers = []
+    # Initialize old NE stuff for stopping criterion
+    value_pelicans = 0.
+    mixture_pelicans = np.array([1.])
+    mixture_panthers = np.array([1.])
     # Create DataFrame for plotting purposes
     df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff"]
     df = pd.DataFrame(columns = df_cols)
@@ -260,7 +262,6 @@ def run_pnm(exp_path,
     # Train best responses until Nash equilibrium is found or max_iterations are reached
     logger.info('Parallel Nash Memory (PNM)')
     for i in range(max_pnm_iterations):
-
         logger.info("*********************************************************")
         logger.info('PNM iteration ' + str(i + 1) + ' of ' + str(max_pnm_iterations))
         logger.info("*********************************************************")
@@ -279,6 +280,7 @@ def run_pnm(exp_path,
                                         pelicans,
                                         panthers,
                                         trials = PAYOFF_MATRIX_TRIALS)
+
         #logger.info("Memory allocated before: " + str(torch.cuda.memory_allocated()))
         #logger.info("Clearing GPU memory.")
         #del pelican_model
@@ -292,11 +294,23 @@ def run_pnm(exp_path,
         logger.info("As numpy array:")
         logger.info('\n' + str(payoffs))
         logger.info("As dataframe:")
-        tmp_df = pd.DataFrame(payoffs).rename_axis('Pelican', axis=0).rename_axis('Panther', axis=1)
+        tmp_df = pd.DataFrame(payoffs).rename_axis('Pelican', axis = 0).rename_axis('Panther', axis = 1)
         logger.info('\n' + str(tmp_df))
 
         # save payoff matrix
         np.save('%s/payoffs_%d.npy' % (pnm_logs_exp_path, i), payoffs)
+
+        # Check if we found a stable NE, in that case we are done (and fitting DF)
+        if i > 0:
+            br_value_pelican = np.dot(mixture_pelicans, payoffs[-1, :-1])
+            br_value_panther = np.dot(mixture_panthers, -payoffs[:-1, -1])
+            values = dict(zip(df_cols, [value_pelicans, br_value_pelican, br_value_panther]))
+            df = df.append(values, ignore_index = True)
+            if early_stopping and \
+                    abs(br_value_pelican - value_pelicans) < stopping_eps and\
+                    abs(br_value_panther - value_pelicans) < stopping_eps:
+                print('Stable Nash Equilibrium found')
+                break
 
         # solve game for pelican
         (mixture_pelicans, value_pelicans) = lp_solve.solve_zero_sum_game(payoffs)
@@ -321,22 +335,11 @@ def run_pnm(exp_path,
         # end of logging matrix game and solution
         logger.info("=================================================")
 
-        # Check if we found a stable NE, in that case we are done (and fitting DF)
-        br_value_pelican = np.dot(mixture_pelicans, payoffs[-1])
-        br_value_panther = np.dot(mixture_panthers, -payoffs[:, -1])
-        values = dict(zip(df_cols, [value_pelicans, br_value_pelican, br_value_panther]))
-        df = df.append(values, ignore_index = True)
-        if early_stopping and i > 0 and \
-                abs(br_value_pelican - value_pelicans) < stopping_eps and\
-                abs(br_value_panther - value_panthers) < stopping_eps:
-            print('Stable Nash Equilibrium found')
-            break
-
         # Train from skratch or retrain an existing model for pelican
         logger.info('Training pelican')
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(pelicans, 1, p = mixture_pelicans)[0]
-            path = glob.glob(path+"/*.zip")[0]
+            path = glob.glob(path + "/*.zip")[0]
             pelican_model = helper.loadAgent(path, pelican_model_type)
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
@@ -359,7 +362,7 @@ def run_pnm(exp_path,
         logger.info('Training panther')
         if np.random.rand(1) < retraining_prob:
             path = np.random.choice(panthers, 1, p = mixture_panthers)[0]
-            path = glob.glob(path+"/*.zip")[0]
+            path = glob.glob(path + "/*.zip")[0]
             panther_model = helper.loadAgent(path, panther_model_type)
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
@@ -377,7 +380,8 @@ def run_pnm(exp_path,
                                                                     previous_steps = panther_training_steps,
                                                                     parallel = parallel)
         panther_training_steps = panther_training_steps + steps
-        df_path = os.path.join(exp_path, "values_iter_%02d.csv" % i)
+
+        df_path = os.path.join(pnm_logs_exp_path, "values_iter_%02d.csv" % i)
         df.to_csv(df_path, index = False)
         print("==========================================")
         print("WRITTEN DF TO CSV: %s" % df_path)
