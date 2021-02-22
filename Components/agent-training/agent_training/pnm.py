@@ -106,7 +106,7 @@ def train_agent_against_mixture(driving_agent, # agent that we train
 
     opponents = np.random.choice(opponent_policy_fpaths, 
                                  size = max_steps // testing_interval, 
-                                 p = mixture)
+                                 p = opponent_mixture)
     
     # If we use parallel envs, we run all the training against different sampled opponents in parallel
     if parallel:
@@ -480,17 +480,17 @@ def main():
 
     run_pnm(exp_path,
             basicdate,
-            pelican_testing_interval = 250,
-            pelican_max_learning_steps = 250,
-            panther_testing_interval = 250,
-            panther_max_learning_steps = 250,
+            pelican_testing_interval = 100,
+            pelican_max_learning_steps = 100,
+            panther_testing_interval = 100,
+            panther_max_learning_steps = 100,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
             retraining_prob = .8,
             model_type = 'PPO', # 'PPO' instead of 'PPO2' since we are using torch version
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 10,
+            num_parallel_envs = 7,
             early_stopping = False,
             sparse = False)
 
