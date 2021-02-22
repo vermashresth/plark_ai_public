@@ -23,4 +23,4 @@ panther_push:
 	docker push $(REGISTRY)/${RL_TEAM_ID}:panther_latest
 
 panther_test:
-	docker run $(REGISTRY)/${RL_TEAM_ID}:panther_latest Combatant/tests/test_combatant.she .
+	docker run $(REGISTRY)/${RL_TEAM_ID}:panther_latest Combatant/tests/test_combatant.sh
