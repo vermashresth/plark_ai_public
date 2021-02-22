@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 PAYOFF_MATRIX_TRIALS = 50
 MAX_ILLEGAL_MOVES_PER_TURN = 2
 
-#######################################################################
+""
 def get_fig(df):
     fig, (ax1,ax2) = plt.subplots(nrows=2, ncols=1, sharex=True)
     df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax=ax1)
@@ -457,10 +457,10 @@ def main():
 
     run_pnm(exp_path,
             basicdate,
-            pelican_testing_interval = 1000,
-            pelican_max_learning_steps = 1000,
-            panther_testing_interval = 1000,
-            panther_max_learning_steps = 1000,
+            pelican_testing_interval = 250,
+            pelican_max_learning_steps = 250,
+            panther_testing_interval = 250,
+            panther_max_learning_steps = 250,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
             retraining_prob = .8,
