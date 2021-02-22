@@ -35,9 +35,18 @@ MAX_ILLEGAL_MOVES_PER_TURN = 2
 
 #######################################################################
 def get_fig(df):
+    # fig, (ax1,ax2) = plt.subplots(nrows=2, ncols=1, sharex=True)
+    # df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax=ax1)
+    # df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind='bar', ax=ax2)
     fig, (ax1,ax2) = plt.subplots(nrows=2, ncols=1, sharex=True)
-    df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax=ax1)
-    df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind='bar', ax=ax2)
+    df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax=ax1,fontsize=6)
+    ax1.legend(loc='upper right',prop={'size': 7})
+    ax1.set_ylabel('Payoff to Pelican')
+    df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind='bar', ax=ax2, rot=0)
+    ax2.tick_params(axis='x', which='both', labelsize=6)
+    ax2.legend(loc='upper left',prop={'size': 8})
+
+
 
 def compute_payoff_matrix(pelican,
                           panther,
