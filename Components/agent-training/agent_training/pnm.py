@@ -89,13 +89,13 @@ def compute_payoff_matrix(pelican,
         payoffs[i, -1] = -avg_reward
     return payoffs
 
-def train_agent_against_mixture(driving_agent,
-                                policy,
+def train_agent_against_mixture(driving_agent, # agent that we train
+                                # policy,
                                 exp_path,
-                                model,
+                                model, 
                                 env,
-                                tests,
-                                mixture,
+                                opponent_policy_fpaths, # policies of opponent of driving agent
+                                opponent_mixture, # mixture of opponent of driving agent
                                 testing_interval,
                                 max_steps,
                                 model_type,
@@ -104,7 +104,9 @@ def train_agent_against_mixture(driving_agent,
                                 previous_steps = 0,
                                 parallel = False):
 
-    opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
+    opponents = np.random.choice(opponent_policy_fpaths, 
+                                 size = max_steps // testing_interval, 
+                                 p = mixture)
     
     # If we use parallel envs, we run all the training against different sampled opponents in parallel
     if parallel:
@@ -125,7 +127,8 @@ def train_agent_against_mixture(driving_agent,
 
     # Otherwise we sample different opponents and we train against each of them separately
     else:
-        opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
+        # not needed as called identically before if !?
+        # opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
         for opponent in opponents:
             if driving_agent == 'pelican': 
                 env.set_panther_using_path(opponent)
@@ -402,12 +405,13 @@ def run_pnm(exp_path,
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
-                                                                    policy,
+                                                                    # policy,
                                                                     pelicans_tmp_exp_path,
                                                                     pelican_model,
                                                                     pelican_env,
                                                                     panthers,
-                                                                    mixture_pelicans,
+                                                                    mixture_panthers,
+                                                                    # mixture_pelicans, !!!!!
                                                                     pelican_testing_interval,
                                                                     pelican_max_learning_steps,
                                                                     pelican_model_type,
@@ -425,12 +429,13 @@ def run_pnm(exp_path,
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
-                                                                    policy,
+                                                                    # policy,
                                                                     panthers_tmp_exp_path,
                                                                     panther_model,
                                                                     panther_env,
                                                                     pelicans,
-                                                                    mixture_panthers,
+                                                                    mixture_pelicans,
+                                                                    # mixture_panthers, !!
                                                                     panther_testing_interval,
                                                                     panther_max_learning_steps,
                                                                     panther_model_type,
