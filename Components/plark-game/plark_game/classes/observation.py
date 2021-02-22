@@ -1,6 +1,6 @@
 import gym
 from gym import error, spaces, utils
-
+import numpy as np
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -210,7 +210,7 @@ class Observation():
                 for i in obs_shape:
                         obs_shape_new.append(i+1)
                 obs_shape = obs_shape_new       
-
+                self.observation_max_for_normalisation = obs_shape
                 self.observation_space = spaces.MultiDiscrete(obs_shape)
                 # logger.info("Observation space: MultiDiscrete: {}".format(obs_shape))
                 # logger.info("Observation space: MultiDiscrete: {}".format(obs_label)) 
@@ -392,4 +392,7 @@ class Observation():
                 #logger.info("Observation: {}".format(obs))
                 #logger.info("Observation space size: {}".format(len(obs)))
                 # logger.info("Observation labels: {}".format(obs_label_from_state))
-                return obs
+                if self.kwargs.get('normalise', False):
+                    return np.divide(np.array(obs), np.array(self.observation_max_for_normalisation))
+                else:
+                    return obs
