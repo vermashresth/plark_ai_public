@@ -1,9 +1,9 @@
 # +
-# #!pip install pycddlib
+# !pip install pycddlib
 # #!pip install torch
 # #!pip install numba
-# #!pip install stable-baselines3
-
+# !pip install stable-baselines3
+# #!pip install lp_solve
 # The following is needed on the DGX:
 # #!pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
 import sys
@@ -206,7 +206,8 @@ def run_pnm(exp_path,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
                                   sparse = sparse,
-                                  vecenv = PARALLEL)
+                                  vecenv = PARALLEL,
+                                  normalise=NORMALISE)
     pelican_model = helper.make_new_model(MODEL_TYPE, POLICY, pelican_env, n_steps=TRAINING_STEPS)
     logger.info('Training initial pelican')
     pelican_agent_filepath, pelican_training_steps = train_agent(pelicans_tmp_exp_path,
@@ -223,7 +224,8 @@ def run_pnm(exp_path,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
                                   sparse = sparse,
-                                  vecenv = PARALLEL)
+                                  vecenv = PARALLEL,
+                                  normalise=NORMALISE)
     panther_model = helper.make_new_model(MODEL_TYPE, POLICY, panther_env, n_steps=TRAINING_STEPS)
     logger.info('Training initial panther')
     panther_agent_filepath, panther_training_steps = train_agent(panthers_tmp_exp_path,
@@ -436,3 +438,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
