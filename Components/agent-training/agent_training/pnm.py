@@ -5,7 +5,7 @@
 # #!pip install stable-baselines3
 
 # The following is needed on the DGX:
-# !pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+# #!pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
 import sys
 sys.path.insert(1, '/Components/')
 
@@ -163,7 +163,7 @@ def train_agent(exp_path,
         model.learn(testing_interval)
         steps = steps + testing_interval
         if early_stopping:
-            victory_count, avg_reward = helper.check_victory(model, env, trials = 10)
+            victory_count, avg_reward = helper.check_victory(model, env, trials = 100)
             if victory_count > 7:
                 logger.info("Stopping training early")
                 break # Stopping training as winning
@@ -481,7 +481,7 @@ def main():
             panther_max_learning_steps = 250,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
-            retraining_prob = 1.0,
+            retraining_prob = .8,
             model_type = 'PPO', # 'PPO' instead of 'PPO2' since we are using torch version
             log_to_tb = True,
             image_based = False,
