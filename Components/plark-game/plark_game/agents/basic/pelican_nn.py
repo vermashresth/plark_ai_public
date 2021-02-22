@@ -1,10 +1,13 @@
-from plark_game.classes import Pelican_Agent
+from plark_game.classes.pelicanAgent import *
+from plark_game.agents.basic.nn_agent import *
+import numpy as np
+import torch
 
-class PelicanNN(Pelican_Agent):
+class PelicanNN(NNAgent):
 
-    def __init__(self):
-        pass
+    def __init__(self, num_inputs, num_hidden_layers=0, neurons_per_hidden_layer=0):
+        super().__init__(num_inputs, len(ACTION_LOOKUP), 
+                         num_hidden_layers, neurons_per_hidden_layer)
 
-    def getAction(self, state):
-        print("PelicanNN action!")
-        return '1'
+    def action_lookup(self, action):
+        return ACTION_LOOKUP[action]

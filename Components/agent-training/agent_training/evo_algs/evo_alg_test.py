@@ -41,12 +41,12 @@ def evaluate(genome):
     reward = 0
     obs = env._observation()
     for step_num in range(max_num_steps):
-        #print("Step num", step_num)
+        print("Step num", step_num)
         action = agent.getAction(obs)    
         obs, r, done, info = env.step(action)
         reward += r
-        #if done:
-        #    break
+        if done:
+            break
 
     print("Finished at step num:", step_num)
     print("Reward:", reward)
@@ -73,6 +73,12 @@ if __name__ == '__main__':
     dummy_agent = PantherNN(num_inputs=num_inputs, num_hidden_layers=num_hidden_layers, 
                             neurons_per_hidden_layer=neurons_per_hidden_layer)  
     num_weights = dummy_agent.get_num_weights()
+    
+    #obs = dummy_env._observation()
+    #print(obs)
+    #print(len(obs))
+
+    #exit()
 
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -94,10 +100,12 @@ if __name__ == '__main__':
     toolbox.register("generate", strategy.generate, creator.Individual)
     toolbox.register("update", strategy.update)
 
-    import multiprocessing
+    parallelise = False
+    if parallelise:
+        import multiprocessing
 
-    pool = multiprocessing.Pool()
-    toolbox.register("map", pool.map)
+        pool = multiprocessing.Pool()
+        toolbox.register("map", pool.map)
 
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
