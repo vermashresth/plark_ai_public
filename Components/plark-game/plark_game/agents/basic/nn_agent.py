@@ -61,8 +61,8 @@ class NNAgent(Agent):
         net_out = self._forward_pass(state)
 
         #Get action from nework output
-        #action = self._get_most_probable_action(net_out)
-        action = self._sample_action(net_out)
+        action = self._get_most_probable_action(net_out)
+        #action = self._sample_action(net_out)
 
         return action
 
@@ -71,7 +71,6 @@ class NNAgent(Agent):
         num_weights = 0
         for layer in self.nn:
             for params in layer.parameters():
-                #num_weights += np.prod(params.size())
                 num_weights += params.numel()
         return num_weights
 
