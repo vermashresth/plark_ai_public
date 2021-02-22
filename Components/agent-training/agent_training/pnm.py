@@ -1,9 +1,3 @@
-# +
-# !pip install pycddlib
-# !pip install torch
-# !pip install numba
-# !pip install stable-baselines3
-
 import sys
 sys.path.insert(1, '/Components/')
 
@@ -11,16 +5,11 @@ import datetime
 import numpy as np
 import pandas as pd
 import os
-import gc
 import glob
-from tensorboardX import SummaryWriter
 import helper
 import lp_solve
-import torch
 import matplotlib.pyplot as plt
 import itertools
-
-# -
 
 import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -28,20 +17,17 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-#######################################################################
-# PARAMS (in a config file later?)
 
-PAYOFF_MATRIX_TRIALS = 50
-MAX_ILLEGAL_MOVES_PER_TURN = 2
+PAYOFF_MATRIX_TRIALS = 100
+MAX_ILLEGAL_MOVES_PER_TURN = 3
 
-#######################################################################
 def get_fig(df):
-    fig, (ax1,ax2) = plt.subplots(nrows = 2, ncols = 1, sharex = True)
+    fig, (ax1, ax2) = plt.subplots(nrows = 2, ncols = 1, sharex = True)
     df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax = ax1)
     df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind = 'bar', ax = ax2)
 
-def compute_payoff_matrix(pelican,
-                          panther,
+def compute_payoff_matrix(pelican_model,
+                          panther_model,
                           pelican_env,
                           panther_env,
                           payoffs,
@@ -64,35 +50,33 @@ def compute_payoff_matrix(pelican,
                      mode = 'constant')
 
     # Adding payoff for the last row strategy
-    if pelican is not None:
+    if pelican_model is not None:
         for i, opponent in enumerate(panthers):
             pelican_env.env_method('set_panther_using_path', opponent)
-            victory_count, avg_reward = helper.check_victory(pelican, pelican_env, trials = trials)
+            victory_count, avg_reward = helper.check_victory(pelican_model, pelican_env, trials = trials)
             payoffs[-1, i] = avg_reward
 
     # Adding payoff for the last column strategy
-    if panther is not None:
+    if panther_model is not None:
         for i, opponent in enumerate(pelicans):
             panther_env.env_method('set_pelican_using_path', opponent)
-            victory_count, avg_reward = helper.check_victory(panther, panther_env, trials = trials)
+            victory_count, avg_reward = helper.check_victory(panther_model, panther_env, trials = trials)
             # Given that we are storing everything in one table, and the value below is now computed
             # from the perspective of the panther, I assume we need this value to be negative?
             payoffs[i, -1] = -avg_reward
     return payoffs
 
 def train_agent_against_mixture(driving_agent,
-                                policy,
                                 exp_path,
                                 model,
                                 env,
-                                tests,
-                                mixture,
+                                opponent_filepaths,
+                                opponent_mixture,
                                 testing_interval,
                                 max_steps,
                                 model_type,
                                 num_parallel_envs,
                                 basicdate,
-                                early_stopping = True,
                                 previous_steps = 0,
                                 parallel = False):
 
@@ -100,7 +84,7 @@ def train_agent_against_mixture(driving_agent,
     if parallel:
         # Method to load new opponents via filepath
         setter = 'set_panther_using_path' if driving_agent == 'pelican' else 'set_pelican_using_path'
-        opponents = np.random.choice(tests, size = num_parallel_envs, p = mixture)
+        opponents = np.random.choice(opponent_filepaths, size = num_parallel_envs, p = opponent_mixture)
         for i, opponent in enumerate(opponents):
             env.env_method(setter, opponent, indices = [i])
 
@@ -116,7 +100,7 @@ def train_agent_against_mixture(driving_agent,
 
     # Otherwise we sample different opponents and we train against each of them separately
     else:
-        opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
+        opponents = np.random.choice(opponent_filepaths, size = max_steps // testing_interval, p = opponent_mixture)
         for opponent in opponents:
             if driving_agent == 'pelican':
                 env.set_panther_using_path(opponent)
@@ -191,15 +175,6 @@ def run_pnm(exp_path,
     os.makedirs(pelicans_tmp_exp_path, exist_ok = True)
     panthers_tmp_exp_path = os.path.join(exp_path, 'panthers_tmp')
     os.makedirs(panthers_tmp_exp_path, exist_ok = True)
-
-    if log_to_tb:
-        writer = SummaryWriter(exp_path)
-        pelican_tb_log_name = 'pelican'
-        panther_tb_log_name = 'panther'
-    else:
-        writer = None
-        pelican_tb_log_name = None
-        panther_tb_log_name = None
 
     policy = 'CnnPolicy'
     if image_based is False:
@@ -336,22 +311,9 @@ def run_pnm(exp_path,
                                         panthers,
                                         trials = PAYOFF_MATRIX_TRIALS)
 
-        #logger.info("Memory allocated before: " + str(torch.cuda.memory_allocated()))
-        #logger.info("Clearing GPU memory.")
-        #del pelican_model
-        #del panther_model
-        #gc.collect()
-        #torch.cuda.empty_cache()
-        #logger.info("Memory allocated after: " + str(torch.cuda.memory_allocated()))
-
-        # Logging matrix and updating the DataFrame
+        # Updating the DataFrame
         logger.info("=================================================")
-        logger.info("New matrix game:")
-        logger.info("As numpy array:")
-        logger.info('\n' + str(payoffs))
-        logger.info("As dataframe:")
         tmp_df = pd.DataFrame(payoffs).rename_axis('Pelican', axis = 0).rename_axis('Panther', axis = 1)
-        logger.info('\n' + str(tmp_df))
 
         # Save payoff matrix
         np.save('%s/payoffs_%d.npy' % (pnm_logs_exp_path, i), payoffs)
@@ -383,14 +345,14 @@ def run_pnm(exp_path,
                                                       ssize_panther
                                                       ))
             logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+
+            # Write to CSV file
             values = dict(zip(df_cols, [value_to_pelican, br_value_pelican,
                                                           br_value_panther,
                                                           ssize_pelican,
                                                           ssize_panther]))
             df = df.append(values, ignore_index = True)
-
-            # Write to csv file
-            df_path =  os.path.join(exp_path, 'values_iter_%02d.csv' % i)
+            df_path = os.path.join(exp_path, 'values_iter_%02d.csv' % i)
             df.to_csv(df_path, index = False)
             get_fig(df)
             fig_path = os.path.join(exp_path, 'values_iter_%02d.pdf' % i)
@@ -425,7 +387,6 @@ def run_pnm(exp_path,
         logger.info("After normalisation:")
         logger.info(mixture_panthers)
         np.save('%s/mixture_panthers_%d.npy' % (pnm_logs_exp_path, i), mixture_panthers)
-
         # End of logging matrix game and solution
         logger.info("=================================================")
 
@@ -438,7 +399,6 @@ def run_pnm(exp_path,
         else:
             pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
         pelican_agent_filepath, steps = train_agent_against_mixture('pelican',
-                                                                    policy,
                                                                     pelicans_tmp_exp_path,
                                                                     pelican_model,
                                                                     pelican_env,
@@ -462,7 +422,6 @@ def run_pnm(exp_path,
         else:
             panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
         panther_agent_filepath, steps = train_agent_against_mixture('panther',
-                                                                    policy,
                                                                     panthers_tmp_exp_path,
                                                                     panther_model,
                                                                     panther_env,
@@ -508,7 +467,10 @@ def main():
     exp_path = os.path.join(basepath, exp_name)
     logger.info(exp_path)
 
-    # Initial sets of opponents
+    # Initial sets of opponents is automatically loaded from dir
+    examples_dir = '/data/examples'
+    #pelicans_start_opponents = [p.path for p in os.scandir(examples_dir + '/pelicans') if p.is_dir()]
+    #panthers_start_opponents = [p.path for p in os.scandir(examples_dir + '/panthers') if p.is_dir()]
     #pelicans_start_opponents = ["data/examples/pelicans_tmp/PPO_20210220_152444_steps_" + str(i * 100) + "_pelican" for i in range(1, 7)]
     #panthers_start_opponents = ["data/examples/panthers_tmp/PPO_20210220_152444_steps_" + str(i * 100) + "_panther" for i in range(1, 7)]
     pelicans_start_opponents = []
@@ -516,17 +478,17 @@ def main():
 
     run_pnm(exp_path,
             basicdate,
-            pelican_testing_interval = 100,
-            pelican_max_learning_steps = 100,
-            panther_testing_interval = 100,
-            panther_max_learning_steps = 100,
+            pelican_testing_interval = 1000,
+            pelican_max_learning_steps = 1000,
+            panther_testing_interval = 1000,
+            panther_max_learning_steps = 1000,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
             retraining_prob = 1.0,
             model_type = 'PPO', # 'PPO' instead of 'PPO2' since we are using torch version
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 7,
+            num_parallel_envs = 5,
             early_stopping = False,
             initial_pelicans = pelicans_start_opponents,
             initial_panthers = panthers_start_opponents)
