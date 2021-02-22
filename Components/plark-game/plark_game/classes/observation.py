@@ -393,6 +393,7 @@ class Observation():
                 #logger.info("Observation space size: {}".format(len(obs)))
                 # logger.info("Observation labels: {}".format(obs_label_from_state))
                 if self.kwargs.get('normalise', False):
-                    return np.divide(np.array(obs), np.array(self.observation_max_for_normalisation))
+                    obs_maxs = np.array(self.observation_max_for_normalisation) - 1
+                    return np.divide(np.array(obs), obs_maxs)
                 else:
                     return obs
