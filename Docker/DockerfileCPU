@@ -23,6 +23,7 @@ RUN apt-get -y update \
     unzip \
     xvfb \
     libopenmpi-dev \
+    vim \
     zlib1g-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -55,10 +56,12 @@ ADD jupyter_notebook_config.json /root/.jupyter/jupyter_notebook_config.json
 RUN ln -sfn /usr/bin/pip3 /usr/bin/pip
 RUN ln -sfn /usr/bin/python3.6 /usr/bin/python
 RUN pip install tensorflow==1.14
+RUN pip install torch==1.7.1 --no-cache-dir
 ADD requirements.txt /usr/local/requirements.txt
 RUN pip install --upgrade -r /usr/local/requirements.txt
 
 ADD run_servers.sh /run_servers.sh
+ADD install_components.sh /install_components.sh
 ADD plark_robot_tests /plark_robot_tests
 # set working directory
 WORKDIR /

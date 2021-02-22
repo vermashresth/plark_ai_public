@@ -23,7 +23,7 @@
             "move_limit": 20,
             "madman_range": 0,
             "agent_filepath": "pelicanAgent_5_buoys.py",
-            "agent_name":"Pelican_Agent_5_Bouys",
+            "agent_name":"Pelican_Agent_5_Buoys",
             "default_torps" : 5,
             "default_sonobuoys": 5,
             "render_height": 250 ,

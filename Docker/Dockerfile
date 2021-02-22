@@ -17,6 +17,7 @@ RUN apt-get -y update \
     libxrender1 \
     libopenmpi-dev \
     zlib1g-dev \
+    libgmp3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

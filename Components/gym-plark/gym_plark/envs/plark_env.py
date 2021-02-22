@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 class PlarkEnv(gym.Env):
 	metadata = {'render.modes': ['human']}
 
@@ -34,7 +35,7 @@ class PlarkEnv(gym.Env):
 			self.driving_agent = 'pelican'
 			self.kwargs['driving_agent'] = self.driving_agent
 
-		logger.info('plark.kwargs :'+ str(self.kwargs))
+		#logger.info('plark.kwargs :'+ str(self.kwargs))
 
 		self.verbose = verbose
 		self.viewer = None
@@ -43,7 +44,7 @@ class PlarkEnv(gym.Env):
 
 		self.image_based = kwargs.get('image_based', True)
 
-		logger.info('self.image_based :'+ str(self.image_based))
+		#logger.info('self.image_based :'+ str(self.image_based))
 		
 		self.env = classes.Environment()
 		self.config_file_path = config_file_path
@@ -104,14 +105,14 @@ class PlarkEnv(gym.Env):
 				self.env.activeGames[len(self.env.activeGames)-1].reset_game()
 			else:    
 				if self.config_file_path:
-					logger.info('config filepath: ' +str(self.config_file_path))
+					#logger.info('config filepath: ' +str(self.config_file_path))
 					self.env.createNewGame(config_file_path=self.config_file_path, **self.kwargs)
 				else:
 					self.env.createNewGame(**self.kwargs)
 			self.game = self.env.activeGames[len(self.env.activeGames)-1]		
 			self.observation = classes.Observation(self.game,**kwargs)
 			self.observation_space = self.observation.get_observation_space() 
-			logger.info('Non image observations created')
+			#logger.info('Non image observations created')
 
 			
 			
@@ -210,6 +211,25 @@ class PlarkEnv(gym.Env):
 					raise ValueError('driving_agent not set correctly')
 		
 		return ob, reward, done, _info
+
+	def set_pelican(self, pelican):
+            self.env.activeGames[len(self.env.activeGames)-1].set_pelican(pelican)
+
+	def set_panther(self, panther):
+            self.env.activeGames[len(self.env.activeGames)-1].set_panther(panther)
+
+	def set_pelican_using_path(self, pelican):
+            self.env.activeGames[len(self.env.activeGames)-1].load_pelican_using_path(pelican)
+
+	def set_panther_using_path(self, panther):
+            self.env.activeGames[len(self.env.activeGames)-1].load_panther_using_path(panther)
+
+	def clear_memory(self):
+            self.env.activeGames[len(self.env.activeGames)-1].clear_memory()
+
+
+	def wrapper_test_function(self):
+            print("hello there!")
 
 	def reset(self):
 		#If a game already exists. reset

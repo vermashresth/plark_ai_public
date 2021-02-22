@@ -1,11 +1,15 @@
 import os
 from stable_baselines import DQN, PPO2, A2C, ACKTR
+from stable_baselines3 import PPO # PyTorch Stable Baselines
 from .pantherAgent import Panther_Agent
 import logging
 import numpy  as np
 from .pil_ui import PIL_UI
+import gc
+import torch
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class Panther_Agent_Load_Agent(Panther_Agent):
 
@@ -33,6 +37,8 @@ class Panther_Agent_Load_Agent(Panther_Agent):
 				self.model = DQN.load(filepath)
 			elif algorithm_type.lower() == 'ppo2':
 				self.model = PPO2.load(filepath)
+			elif algorithm_type.lower() == 'ppo':
+				self.model = PPO.load(filepath)
 			elif algorithm_type.lower() == 'a2c':
 				self.model = A2C.load(filepath)
 			elif algorithm_type.lower() == 'acktr':

@@ -8,11 +8,18 @@ import PIL.Image
 import numpy as np
 from plark_game import classes
 from gym_plark.envs import plark_env
-
+from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
+from gym_plark.envs.plark_env import PlarkEnv
+from stable_baselines.common.vec_env import SubprocVecEnv
 from stable_baselines.common.env_checker import check_env
 from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
 from stable_baselines.common.vec_env import DummyVecEnv, VecEnv
+from copy import deepcopy
+
+# PyTorch Stable Baselines
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv as SubprocVecEnv_Torch
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -21,11 +28,13 @@ def model_label(modeltype,basicdate,modelplayer):
     label = modeltype + "_" + str(basicdate) + "_" + modelplayer
     return label
 
-def make_new_model(model_type,policy,env, tensorboard_log=None):
+def make_new_model(model_type,policy,env, n_steps=100, tensorboard_log=None):
     if model_type.lower() == 'dqn':
         model = DQN(policy,env,tensorboard_log=tensorboard_log)
     elif model_type.lower() == 'ppo2':
         model = PPO2(policy,env,tensorboard_log=tensorboard_log)
+    elif model_type.lower() == 'ppo':
+        model = PPO(policy,env, n_steps=n_steps)
     elif model_type.lower() == 'a2c':
         model = A2C(policy,env,tensorboard_log=tensorboard_log)
     elif model_type.lower() == 'acktr':
@@ -73,13 +82,66 @@ def train_until(model, env, victory_threshold=0.8, victory_trials=10, max_second
 
 def check_victory(model,env,trials = 10):
     victory_count = 0
-    list_of_reward, n_steps, victories = evaluate_policy(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
+    if isinstance(env, SubprocVecEnv_Torch):
+        list_of_reward, n_steps, victories = evaluate_policy_torch(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
+    else: 
+        list_of_reward, n_steps, victories = evaluate_policy(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
+
+    logger.info("===================================================")
+    modelplayer = env.get_attr('driving_agent')[0]
+    logger.info('In check_victory, driving_agent: %s' % modelplayer)
 
     victory_count = len([v for v in victories if v == True])
-    logger.info('victory_count = '+ str(victory_count))        
+    logger.info('victory_count = %s out of %s' % (victory_count, len(victories))        )
     avg_reward = float(sum(list_of_reward))/len(list_of_reward)
-    logger.info('avg_reward = '+ str(avg_reward))        
+    logger.info('avg_reward = %.3f' % avg_reward)        
+
+    logger.info("===================================================")
+
     return victory_count, avg_reward
+
+def evaluate_policy_torch(model, env, n_eval_episodes=4, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False):
+    """
+    Modified from https://stable-baselines.readthedocs.io/en/master/_modules/stable_baselines/common/evaluation.html#evaluate_policy
+    to return additional info
+    """
+    logger.debug("Evaluating policy")
+    episode_rewards, episode_lengths, victories = [], [], []
+    obs = env.reset()
+    episodes_reward = [0.0 for _ in range(env.num_envs)]
+    episodes_len = [0.0 for _ in range(env.num_envs)]
+    state = None
+
+    logger.debug("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+    logger.debug("In evaluate_policy_torch, n_eval_episodes: %s" % n_eval_episodes)
+    logger.debug("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+
+    while len(episode_rewards) < n_eval_episodes:
+        action, state = model.predict(obs, state=state, deterministic=deterministic)
+        obs, rewards, dones, _infos = env.step(action)
+        for i in range(len(rewards)):
+            episodes_reward[i] += rewards[i]
+            episodes_len[i] += 1
+        if render:
+            env.render()
+        if dones.any():
+           for i, d in enumerate(dones):
+               if d:
+                   info = _infos[i]
+                   victory = info['result'] == "WIN"
+                   victories.append(victory)
+                   episode_rewards.append(episodes_reward[i])
+                   episode_lengths.append(episodes_len[i])
+                   episodes_reward[i] = 0
+                   episodes_len[i] = 0
+
+    mean_reward = np.mean(episode_rewards)
+    std_reward = np.std(episode_rewards)
+    if reward_threshold is not None:
+        assert mean_reward > reward_threshold, "Mean reward below threshold: {:.2f} < {:.2f}".format(mean_reward, reward_threshold)
+    if return_episode_rewards:
+        return episode_rewards, episode_lengths, victories
+    return mean_reward, std_reward, victories
 
 def evaluate_policy(model, env, n_eval_episodes=4, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False):
     """
@@ -95,7 +157,7 @@ def evaluate_policy(model, env, n_eval_episodes=4, deterministic=True, render=Fa
 
         episode_length = 0
         episode_reward = 0.0
-        if isinstance(env, VecEnv):
+        if isinstance(env, VecEnv) or isinstance(env, SubprocVecEnv_Torch):
             episodes_reward = [0.0 for _ in range(env.num_envs)]
         else:
             episodes_reward = [0.0]
@@ -143,11 +205,66 @@ def evaluate_policy(model, env, n_eval_episodes=4, deterministic=True, render=Fa
         return episode_rewards, episode_lengths, victories
     return mean_reward, std_reward, victories
 
+def get_env(driving_agent, 
+            config_file_path, 
+            opponent=None, 
+            image_based=False, 
+            random_panther_start_position=True,
+            max_illegal_moves_per_turn = 3,
+            sparse=False):
+
+    params = dict(driving_agent = driving_agent,
+                  config_file_path = config_file_path,
+                  image_based = image_based,
+                  random_panther_start_position = random_panther_start_position,
+                  max_illegal_moves_per_turn = max_illegal_moves_per_turn)
+    
+    if opponent != None and driving_agent == 'pelican':
+        params.update(panther_agent_filepath = opponent)
+    elif opponent != None and driving_agent == 'panther':
+        params.update(pelican_agent_filepath = opponent)
+    if sparse:
+        return PlarkEnvSparse(**params)
+    else:
+        return PlarkEnv(**params)
+
+def get_envs(driving_agent, 
+             config_file_path, 
+             opponents=[], 
+             num_envs=1,
+             image_based=False, 
+             random_panther_start_position=True,
+             max_illegal_moves_per_turn=3,
+             sparse=False,
+             vecenv=True,
+             mixture=None):
+
+    params = dict(driving_agent = driving_agent,
+                  config_file_path = config_file_path,
+                  image_based = image_based,
+                  random_panther_start_position = random_panther_start_position,
+                  max_illegal_moves_per_turn = max_illegal_moves_per_turn,
+                  sparse = sparse)
+
+    if len(opponents) == 1:
+        params.update(opponent=opponents[0])
+    if vecenv == False:
+        return get_env(**params)
+    elif len(opponents) < 2:
+        return SubprocVecEnv_Torch([lambda:get_env(**params) for _ in range(num_envs)])
+    elif len(opponents) >= 2:
+        opponents = np.random.choice(opponents, size = num_envs, p = mixture)
+        params_list = []
+        for o in opponents:
+            params.update(opponent=o)
+            params_list.append(deepcopy(params))
+        return SubprocVecEnv_Torch([lambda:get_env(**params) for params in params_list])
+
 # Save model base on env
 def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
     if basicdate is None:
         basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-    if isinstance(env, VecEnv):
+    if isinstance(env, VecEnv) or isinstance(env, SubprocVecEnv_Torch):
         modelplayer = env.get_attr('driving_agent')[0]
         render_height = env.get_attr('render_height')[0]
         render_width = env.get_attr('render_width')[0]
@@ -198,7 +315,7 @@ def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_heigh
 
     logger.info('json saved to: '+json_path)
 
-    
+
 ## Custom Model Evaluation Method for evaluating Plark games. 
 ## Does require changes to how data is passed back from environments. 
 ## Instead of using return ob, reward, done, {} use eturn ob, reward, done, {game.state}
@@ -263,6 +380,21 @@ def custom_eval(model, env, n_eval_episodes=10, deterministic=True,
         return episode_rewards, episode_lengths, totalwin
     return mean_reward, std_reward, totalwin
 
+def loadAgent(filepath, algorithm_type):
+    try:
+        if algorithm_type.lower() == 'dqn':
+            model = DQN.load(filepath)
+        elif algorithm_type.lower() == 'ppo2': 
+            model = PPO2.load(filepath)
+        elif algorithm_type.lower() == 'ppo': 
+            model = PPO.load(filepath)
+        elif algorithm_type.lower() == 'a2c':
+            model = A2C.load(filepath)
+        elif algorithm_type.lower() == 'acktr':
+            model = ACKTR.load(filepath)
+        return model
+    except:
+        raise ValueError('Error loading agent. File : "' + filepath + '" does not exsist' )
 
 def og_load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, panther_agent_filepath, panther_agent_name, config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',video_path='/Components/plark_ai_flask/builtangularSite/dist/assets/videos'):
     """
@@ -284,8 +416,8 @@ def og_load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name,
 
                 with open(metadata_filepath) as f:
                     metadata = json.load(f)
-                logger.info('Playing against:'+agent_filepath)	
-                if metadata['agentplayer'] == 'pelican':	
+                logger.info('Playing against:'+agent_filepath)  
+                if metadata['agentplayer'] == 'pelican':        
                     pelican_agent = classes.Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'])
                     pelican_model = pelican_agent.model
 
@@ -357,7 +489,7 @@ def make_video(model,env,video_file_path,n_steps = 10000,fps=10,deterministic=Fa
             break
     writer.close()  
     return basewidth,hsize      
-    
+
 def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps = 10000,fps=10,deterministic=False,basewidth = 512,verbose =False):
     # Test the trained agent
     # This is when you have a plark game agent and a plark game 
@@ -379,5 +511,34 @@ def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps
         if game_state_dict['game_state'] == "PELICANWIN" or game_state_dict['game_state'] == "WINCHESTER" or game_state_dict['game_state'] == "ESCAPE": 
             break
     writer.close()  
+    return basewidth,hsize  
+
+def make_video_plark_env(agent, env, video_file_path, n_steps=10000, fps=10, deterministic=False, basewidth=512, verbose=False):
+
+    print("Recording video...")
+
+    # Test the trained agent
+    # This is when you have a plark game agent and a plark env
+    env.reset()
+    writer = imageio.get_writer(video_file_path, fps=fps) 
+    hsize = None
+
+    obs = env._observation()
+    for step in range(n_steps):
+        image = env.render(view='ALL')
+        action = agent.getAction(obs)
+        obs, _, done, _ = env.step(action)
+       
+        if hsize is None:
+            wpercent = (basewidth/float(image.size[0]))
+            hsize = int((float(image.size[1])*float(wpercent)))
+        res_image = image.resize((basewidth,hsize), PIL.Image.ANTIALIAS)
+        writer.append_data(np.copy(np.array(res_image)))
+
+        if done:
+            break
+
+    writer.close()  
+
     return basewidth,hsize  
 
