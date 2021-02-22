@@ -210,13 +210,15 @@ def get_env(driving_agent,
             image_based=False, 
             random_panther_start_position=True,
             max_illegal_moves_per_turn = 3,
-            sparse=False):
+            sparse=False,
+            normalise=False):
 
     params = dict(driving_agent = driving_agent,
                   config_file_path = config_file_path,
                   image_based = image_based,
                   random_panther_start_position = random_panther_start_position,
-                  max_illegal_moves_per_turn = max_illegal_moves_per_turn)
+                  max_illegal_moves_per_turn = max_illegal_moves_per_turn,
+                  normalise=normalise)
     
     if opponent != None and driving_agent == 'pelican':
         params.update(panther_agent_filepath = opponent)
@@ -236,14 +238,16 @@ def get_envs(driving_agent,
              max_illegal_moves_per_turn=3,
              sparse=False,
              vecenv=True,
-             mixture=None):
+             mixture=None,
+             normalise=False):
 
     params = dict(driving_agent = driving_agent,
                   config_file_path = config_file_path,
                   image_based = image_based,
                   random_panther_start_position = random_panther_start_position,
                   max_illegal_moves_per_turn = max_illegal_moves_per_turn,
-                  sparse = sparse)
+                  sparse = sparse,
+                  normalise = normalise)
 
     if len(opponents) == 1:
         params.update(opponent=opponents[0])
@@ -268,26 +272,28 @@ def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
         render_height = env.get_attr('render_height')[0]
         render_width = env.get_attr('render_width')[0]
         image_based = env.get_attr('image_based')[0]
+        normalise = env.get_attr('normalise')[0]
     else:
         modelplayer = env.driving_agent 
         render_height = env.render_height
         render_width = env.render_width
         image_based = env.image_based
-    model_path,model_dir, modellabel = save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate)
+        normalise = env.normalise
+    model_path,model_dir, modellabel = save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate,normalise)
     return model_path,model_dir, modellabel
 
 # Saves model and metadata
-def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate=None):
+def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate=None, normalise=False):
     if basicdate is None:
         basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-
+    assert isinstance(normalise, bool), "Normalise must be a bool."
     modellabel = model_label(modeltype,basicdate,modelplayer)
     model_dir = os.path.join(basepath, modellabel)
     logger.info("Checking folder: " + model_dir)
     os.makedirs(model_dir, exist_ok=True)
     os.chmod(model_dir, 0o777)
     logger.info("Saving Metadata")
-    save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based)
+    save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based, normalise)
 
     logger.info("Saving Model")
     model_path = os.path.join(model_dir, modellabel + ".zip")
@@ -299,8 +305,7 @@ def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,i
 
 ## Used for generating the json header file which holds details regarding the model.
 ## This will be used when playing the game from the GUI.
-def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_height,render_width,image_based):
-    
+def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_height,render_width,image_based, normalise):
     jsondata = {}
     jsondata['algorithm'] =  modeltype
     jsondata['date'] = str(dateandtime)
@@ -308,6 +313,7 @@ def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_heigh
     jsondata['render_height'] = render_height
     jsondata['render_width'] = render_width
     jsondata['image_based'] = image_based
+    jsondata['normalise'] = normalise
     json_path = os.path.join(model_dir, 'metadata.json')
     with open(json_path, 'w') as outfile:
         json.dump(jsondata, outfile)    

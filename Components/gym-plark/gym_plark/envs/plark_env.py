@@ -19,6 +19,8 @@ class PlarkEnv(gym.Env):
 	def __init__(self,config_file_path=None,verbose=False, **kwargs):
 		self.kwargs = kwargs
 
+		self.normalise = kwargs.get('normalise', False)
+
 		self.random_panther_start_position = kwargs.get('random_panther_start_position', False)
 
 		self.render_height = kwargs.get('render_height', None)
@@ -141,7 +143,7 @@ class PlarkEnv(gym.Env):
 		else:
 			obs = self.observation.get_observation(self.env.activeGames[len(self.env.activeGames)-1]._state(self.view))
 			#return obs
-			return np.array(obs, dtype=np.uint8)
+			return np.array(obs, dtype=np.float)
 
 
 	def step(self, action):
@@ -155,6 +157,9 @@ class PlarkEnv(gym.Env):
 		self.uioutput = uioutput 
 		
 		ob = self._observation()
+
+		#print(self.driving_agent)
+		#print(ob)
 
 		reward = 0
 		done = False

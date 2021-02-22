@@ -1,9 +1,11 @@
 # +
-# !pip install pycddlib
-# !pip install torch
-# !pip install numba
-# !pip install stable-baselines3
+# #!pip install pycddlib
+# #!pip install torch
+# #!pip install numba
+# #!pip install stable-baselines3
 
+# The following is needed on the DGX:
+# !pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
 import sys
 sys.path.insert(1, '/Components/')
 
@@ -18,7 +20,7 @@ import helper
 import lp_solve
 import torch
 import matplotlib.pyplot as plt
-
+import time
 # -
 
 import tensorflow as tf
@@ -27,13 +29,14 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-#######################################################################
+# ######################################################################
 # PARAMS (in a config file later?)
 
 PAYOFF_MATRIX_TRIALS = 50
 MAX_ILLEGAL_MOVES_PER_TURN = 2
+NORMALISE = True
 
-#######################################################################
+""
 def get_fig(df):
     fig, (ax1,ax2) = plt.subplots(nrows=2, ncols=1, sharex=True)
     df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax=ax1)
@@ -175,7 +178,8 @@ def run_pnm(exp_path,
             log_to_tb = False,
             image_based = True,
             num_parallel_envs = 1,
-            early_stopping=True):
+            early_stopping=True,
+            sparse=False):
 
     pelican_training_steps = 0
     panther_training_steps = 0
@@ -215,7 +219,7 @@ def run_pnm(exp_path,
                                   image_based = image_based,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
-                                  sparse = False,
+                                  sparse = sparse,
                                   vecenv = parallel)
     pelican_model = helper.make_new_model(model_type, policy, pelican_env, n_steps=pelican_testing_interval)
     logger.info('Training initial pelican')
@@ -237,7 +241,7 @@ def run_pnm(exp_path,
                                   image_based = image_based,
                                   random_panther_start_position = True,
                                   max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
-                                  sparse = False,
+                                  sparse = sparse,
                                   vecenv = parallel)
     panther_model = helper.make_new_model(model_type, policy, panther_env, n_steps=panther_testing_interval)
     logger.info('Training initial panther')
@@ -267,6 +271,8 @@ def run_pnm(exp_path,
     # Train best responses until Nash equilibrium is found or max_iterations are reached
     logger.info('Parallel Nash Memory (PNM)')
     for i in range(max_pnm_iterations):
+        start = time.time()
+        
         logger.info("*********************************************************")
         logger.info('PNM iteration ' + str(i + 1) + ' of ' + str(max_pnm_iterations))
         logger.info("*********************************************************")
@@ -424,6 +430,9 @@ def run_pnm(exp_path,
                                                                     parallel = parallel)
         panther_training_steps = panther_training_steps + steps
         
+        logger.info("PNM iteration lasted %d: " % (time.time() - start))
+
+        
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))
     # Store DF for printing
@@ -457,18 +466,19 @@ def main():
 
     run_pnm(exp_path,
             basicdate,
-            pelican_testing_interval = 100,
-            pelican_max_learning_steps = 100,
-            panther_testing_interval = 100,
-            panther_max_learning_steps = 100,
+            pelican_testing_interval = 250,
+            pelican_max_learning_steps = 250,
+            panther_testing_interval = 250,
+            panther_max_learning_steps = 250,
             max_pnm_iterations = 100,
             stopping_eps = 0.001,
             retraining_prob = 1.0,
             model_type = 'PPO', # 'PPO' instead of 'PPO2' since we are using torch version
             log_to_tb = True,
             image_based = False,
-            num_parallel_envs = 7,
-            early_stopping = False)
+            num_parallel_envs = 10,
+            early_stopping = False,
+            sparse = False)
 
 if __name__ == '__main__':
     main()
