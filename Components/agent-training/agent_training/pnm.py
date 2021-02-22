@@ -43,7 +43,7 @@ def get_fig(df):
 def compute_payoff_matrix(pelican,
                           panther,
                           pelican_env,
-                          panther_env,                          
+                          panther_env,
                           payoffs,
                           pelicans,
                           panthers,
@@ -52,7 +52,7 @@ def compute_payoff_matrix(pelican,
     CHECK:
 
     - Pelican strategies are rows; panthers are columns
-    - Payoffs are all to the panther though ?? 
+    - Payoffs are all to the panther though ??
       If so then we solving game wrong presumably?
 
     """
@@ -65,15 +65,15 @@ def compute_payoff_matrix(pelican,
 
     # Adding payoff for the last row strategy
     if pelican is not None:
-        for i, opponent in enumerate(panthers):       
-            pelican_env.env_method('set_panther_using_path', opponent)            
+        for i, opponent in enumerate(panthers):
+            pelican_env.env_method('set_panther_using_path', opponent)
             victory_count, avg_reward = helper.check_victory(pelican, pelican_env, trials = trials)
             payoffs[-1, i] = avg_reward
 
     # Adding payoff for the last column strategy
     if panther is not None:
         for i, opponent in enumerate(pelicans):
-            panther_env.env_method('set_pelican_using_path', opponent)        
+            panther_env.env_method('set_pelican_using_path', opponent)
             victory_count, avg_reward = helper.check_victory(panther, panther_env, trials = trials)
             # Given that we are storing everything in one table, and the value below is now computed
             # from the perspective of the panther, I assume we need this value to be negative?
@@ -103,7 +103,7 @@ def train_agent_against_mixture(driving_agent,
         opponents = np.random.choice(tests, size = num_parallel_envs, p = mixture)
         for i, opponent in enumerate(opponents):
             env.env_method(setter, opponent, indices = [i])
-        
+
         agent_filepath, new_steps = train_agent(exp_path,
                                                 model,
                                                 env,
@@ -118,7 +118,7 @@ def train_agent_against_mixture(driving_agent,
     else:
         opponents = np.random.choice(tests, size = max_steps // testing_interval, p = mixture)
         for opponent in opponents:
-            if driving_agent == 'pelican': 
+            if driving_agent == 'pelican':
                 env.set_panther_using_path(opponent)
             else:
                 env.set_pelican_using_path(opponent)
@@ -252,7 +252,7 @@ def run_pnm(exp_path,
                                   max_illegal_moves_per_turn = MAX_ILLEGAL_MOVES_PER_TURN,
                                   sparse = False,
                                   vecenv = parallel)
-    
+
     # If no initial panther agent is given, we train one from fresh
     if len(initial_panthers) == 0:
         # Train initial panther agent vs default pelican
@@ -296,12 +296,15 @@ def run_pnm(exp_path,
         panthers.append(panther_agent_filepath)
 
         if i == 0:
-            pelicans = list(itertools.chain(*pelicans))
-            panthers = list(itertools.chain(*panthers))
+            # If I appended multiple entries all together
+            if len(initial_pelicans) > 0:
+                pelicans = pelicans[0]
+            if len(initial_panthers) > 0:
+                panthers = panthers[0]
             # If it is the first iteration and we are starting with initial models we need to build the corresponding payoff
             # Left out the last one for each (added in the normal cycle flow)
             # As we may start with a different number of agents per set, we need to deal with this
-            for j, pelican, panther in enumerate(itertools.zip_longest(pelicans[:-1], panthers[-1])):
+            for j, (pelican, panther) in enumerate(itertools.zip_longest(pelicans[:-1], panthers[:-1])):
                 if pelican is not None:
                     path = glob.glob(pelican + "/*.zip")[0]
                     pelican_model = helper.loadAgent(path, pelican_model_type)
@@ -317,8 +320,8 @@ def run_pnm(exp_path,
                                                 pelican_env,
                                                 panther_env,
                                                 payoffs,
-                                                pelicans[:min(j, len(pelicans))],
-                                                panthers[:min(j, len(panthers))],
+                                                pelicans[:min(j + 1, len(pelicans))],
+                                                panthers[:min(j + 1, len(panthers))],
                                                 trials = PAYOFF_MATRIX_TRIALS)
 
         # Computing the payoff matrices and solving the corresponding LPs
@@ -373,16 +376,16 @@ def run_pnm(exp_path,
                          Panther BR payoff: %.3f,\n\
                          Pelican Supp Size: %d,\n\
                          Panther Supp Size: %d,\n" % (
-                                                      br_value_pelican, 
-                                                      value_to_pelican, 
+                                                      br_value_pelican,
+                                                      value_to_pelican,
                                                       br_value_panther,
                                                       ssize_pelican,
                                                       ssize_panther
                                                       ))
             logger.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-            values = dict(zip(df_cols, [value_to_pelican, br_value_pelican, 
-                                                          br_value_panther, 
-                                                          ssize_pelican, 
+            values = dict(zip(df_cols, [value_to_pelican, br_value_pelican,
+                                                          br_value_panther,
+                                                          ssize_pelican,
                                                           ssize_panther]))
             df = df.append(values, ignore_index = True)
 
@@ -390,7 +393,7 @@ def run_pnm(exp_path,
             df_path =  os.path.join(exp_path, 'values_iter_%02d.csv' % i)
             df.to_csv(df_path, index = False)
             get_fig(df)
-            fig_path = os.path.join(exp_path, 'values_iter_%02d.pdf' % i) 
+            fig_path = os.path.join(exp_path, 'values_iter_%02d.pdf' % i)
             plt.savefig(fig_path)
             print("==========================================")
             print("WRITTEN DF TO CSV: %s" % df_path)
@@ -473,7 +476,7 @@ def run_pnm(exp_path,
                                                                     previous_steps = panther_training_steps,
                                                                     parallel = parallel)
         panther_training_steps = panther_training_steps + steps
-        
+
     logger.info('Training pelican total steps: ' + str(pelican_training_steps))
     logger.info('Training panther total steps: ' + str(panther_training_steps))
     # Store the DataFrame for future printing
@@ -504,8 +507,10 @@ def main():
     exp_name = 'test_' + basicdate
     exp_path = os.path.join(basepath, exp_name)
     logger.info(exp_path)
-    
+
     # Initial sets of opponents
+    #pelicans_start_opponents = ["data/examples/pelicans_tmp/PPO_20210220_152444_steps_" + str(i * 100) + "_pelican" for i in range(1, 7)]
+    #panthers_start_opponents = ["data/examples/panthers_tmp/PPO_20210220_152444_steps_" + str(i * 100) + "_panther" for i in range(1, 7)]
     pelicans_start_opponents = []
     panthers_start_opponents = []
 
@@ -523,7 +528,7 @@ def main():
             image_based = False,
             num_parallel_envs = 7,
             early_stopping = False,
-            initial_pelican = pelicans_start_opponents,
+            initial_pelicans = pelicans_start_opponents,
             initial_panthers = panthers_start_opponents)
 
 if __name__ == '__main__':
