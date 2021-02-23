@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 TRAINING_STEPS = 100
-PAYOFF_MATRIX_TRIALS = 50
+PAYOFF_MATRIX_TRIALS = 25
 MAX_ILLEGAL_MOVES_PER_TURN = 2
 NORMALISE = True
 MAX_N_OPPONENTS_TO_SAMPLE = 100 
@@ -58,8 +58,6 @@ def get_fig(df):
     ax2.tick_params(axis='x', which='both', labelsize=6)
     ax2.legend(loc='upper left',prop={'size': 8})
 
-
-
 def compute_payoff_matrix(pelican,
                           panther,
                           pelican_env,
@@ -81,16 +79,15 @@ def compute_payoff_matrix(pelican,
     # Adding payoff for the last row strategy
     for i, opponent in enumerate(panthers):#        
         pelican_env.env_method('set_panther_using_path', opponent)            
-        victory_count, avg_reward = helper.check_victory(pelican, pelican_env, trials = PAYOFF_MATRIX_TRIALS)
-        payoffs[-1, i] = avg_reward
+        victory_prop, avg_reward = helper.check_victory(pelican, pelican_env, trials = PAYOFF_MATRIX_TRIALS)
+        payoffs[-1, i] = victory_prop
 
     # Adding payoff for the last column strategy
     for i, opponent in enumerate(pelicans):
         panther_env.env_method('set_pelican_using_path', opponent)        
-        victory_count, avg_reward = helper.check_victory(panther, panther_env, trials = PAYOFF_MATRIX_TRIALS)
-        # Given that we are storing everything in one table, and the value below is now computed
-        # from the perspective of the panther, I assume we need this value to be negative?
-        payoffs[i, -1] = -avg_reward
+        victory_prop, avg_reward = helper.check_victory(panther, panther_env, trials = PAYOFF_MATRIX_TRIALS)
+        payoffs[i, -1] = 1 - victory_prop # do in terms of pelican
+
     return payoffs
 
 def train_agent_against_mixture(driving_agent, # agent that we train
@@ -438,7 +435,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
