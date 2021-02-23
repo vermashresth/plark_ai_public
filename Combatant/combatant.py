@@ -11,6 +11,37 @@ from plark_game.classes.pelicanAgent_load_agent import Pelican_Agent_Load_Agent
 
 from schema import deserialize_state
 
+##########################################################
+# set AGENTS_PATH to point to the directory containg your agents, relative
+# to the base `plark_ai_public` directory (i.e. keep "/plark_ai_public" at
+# the start of the path below - this is the directory as it will be seen
+# in the docker image).
+#
+# This directory should have sub-directories 'panther' and/or 'pelican', and
+# those should have a sub-directory containing your agent.
+# Agent can be either a .zip file and metadata json file, or a .py file.
+
+AGENTS_PATH = os.path.join(
+    "/plark_ai_public", "data", "agents", "models", "latest"
+)
+
+##########################################################
+# You shouldn't need to change BASIC_AGENTS_PATH, unless you
+# alter the directory structure of this package.
+
+BASIC_AGENTS_PATH = os.path.normpath(
+    os.path.join(
+        "/plark_ai_public",
+        "Components",
+        "plark-game",
+        "plark_game",
+        "agents",
+        "basic",
+    )
+)
+
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -125,23 +156,6 @@ class Combatant:
         )
         self.ready = True
         return True
-
-
-
-AGENTS_PATH = os.path.join(
-    "/plark_ai_public", "data", "agents", "models", "latest"
-)
-
-BASIC_AGENTS_PATH = os.path.normpath(
-    os.path.join(
-        "/plark_ai_public",
-        "Components",
-        "plark-game",
-        "plark_game",
-        "agents",
-        "basic",
-    )
-)
 
 
 def run_combatant(agent_type, agent_path, agent_name, basic_agents_path):
