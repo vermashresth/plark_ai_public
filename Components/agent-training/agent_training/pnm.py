@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # PARAMS 
 # ######################################################################
 
-TRAINING_STEPS = 100
+TRAINING_STEPS = 250
 PAYOFF_MATRIX_TRIALS = 25
 MAX_ILLEGAL_MOVES_PER_TURN = 2
 NORMALISE = True
