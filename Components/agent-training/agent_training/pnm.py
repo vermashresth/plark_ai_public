@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 #######################################################################
 # PARAMS 
-#######################################################################
+# ######################################################################
 
 TRAINING_STEPS = 100
 PAYOFF_MATRIX_TRIALS = 25
@@ -43,7 +43,7 @@ MODEL_TYPE = 'PPO' # 'PPO' instead of 'PPO2' since we are using torch version
 POLICY = 'MlpPolicy'
 PARALLEL = True # keep it true while working with PPO
 
-#######################################################################
+""
 
 ""
 def get_fig(df):
@@ -134,12 +134,10 @@ def train_agent_against_mixture(driving_agent, # agent that we train
             env.env_method(setter, opponent, indices = [i % NUM_PARALLEL_ENVS])
             # when we have filled all NUM_PARALLEL_ENVS, then train
             if i > 0 and (i+1) % NUM_PARALLEL_ENVS == 0:
-                logger.info("About to train_agent with parallel envs")
-                agent_filepath, previous_steps = train_agent(exp_path,
-                                                        model,
-                                                        env,
-                                                        basicdate,
-                                                        previous_steps = previous_steps)
+                logger.info("Beginning parallel training for {} steps".format(TRAINING_STEPS))
+                model.set_env(env)
+                model.learn(TRAINING_STEPS)
+                previous_steps += TRAINING_STEPS
 
     # Otherwise we sample different opponents and we train against each of them separately
     else:
@@ -149,11 +147,16 @@ def train_agent_against_mixture(driving_agent, # agent that we train
             else:
                 env.set_pelican_using_path(opponent)
 
-            agent_filepath, previous_steps = train_agent(exp_path,
-                                                    model,
-                                                    env,
-                                                    basicdate,
-                                                    previous_steps = previous_steps)
+            logger.info("Beginning sequential training for {} steps".format(TRAINING_STEPS))
+            model.set_env(env)
+            model.learn(TRAINING_STEPS)
+            previous_steps += TRAINING_STEPS
+            
+    # Save agent
+    logger.info('Finished train agent')
+    basicdate = basicdate + '_steps_' + str(previous_steps)
+    agent_filepath ,_, _= helper.save_model_with_env_settings(exp_path, model, MODEL_TYPE, env, basicdate)
+    agent_filepath = os.path.dirname(agent_filepath)
 
     return agent_filepath, previous_steps
 
@@ -163,16 +166,14 @@ def train_agent(exp_path,
                 basicdate,
                 previous_steps = 0):
 
-    logger.info("Beginning training for {} steps".format(TRAINING_STEPS))
-
+    logger.info("Beginning individual training for {} steps".format(TRAINING_STEPS))
     model.set_env(env)
     model.learn(TRAINING_STEPS)
-
-    # Save agent
+    
     logger.info('Finished train agent')
-    basicdate = basicdate + '_steps_' + str(previous_steps + TRAINING_STEPS)
+    basicdate = basicdate + '_steps_' + str(previous_steps)
     agent_filepath ,_, _= helper.save_model_with_env_settings(exp_path, model, MODEL_TYPE, env, basicdate)
-    agent_filepath = os.path.dirname(agent_filepath)
+    agent_filepath = os.path.dirname(agent_filepath)    
     return agent_filepath, previous_steps + TRAINING_STEPS
 
 def run_pnm(exp_path,
