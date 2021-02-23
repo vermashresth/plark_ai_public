@@ -280,27 +280,28 @@ def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
         render_height = env.get_attr('render_height')[0]
         render_width = env.get_attr('render_width')[0]
         image_based = env.get_attr('image_based')[0]
-        normalise = env.get_attr('normalise')[0]
     else:
         modelplayer = env.driving_agent 
         render_height = env.render_height
         render_width = env.render_width
         image_based = env.image_based
-        normalise = env.normalise
-    model_path,model_dir, modellabel = save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate,normalise)
+    model_path,model_dir, modellabel = save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate)
     return model_path,model_dir, modellabel
 
 # Saves model and metadata
-def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate=None, normalise=False):
+def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate=None):
     if basicdate is None:
         basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-    assert isinstance(normalise, bool), "Normalise must be a bool."
     modellabel = model_label(modeltype,basicdate,modelplayer)
     model_dir = os.path.join(basepath, modellabel)
     logger.info("Checking folder: " + model_dir)
     os.makedirs(model_dir, exist_ok=True)
     os.chmod(model_dir, 0o777)
     logger.info("Saving Metadata")
+    if isinstance(model.env, VecEnv) or isinstance(model.env, SubprocVecEnv_Torch):
+        normalise = model.env.get_attr('normalise')[0]
+    else:
+        normalise = model.env.normalise
     save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based, normalise)
 
     logger.info("Saving Model")

@@ -561,6 +561,7 @@ class Newgame():
             #logger.info('Playing against:'+agent_filepath)  
             kwargs = {}
             kwargs['driving_agent'] = metadata['agentplayer'] 
+            kwargs['normalise'] = metadata['normalise']
             if image_based == False:
                 observation = Observation(self,**kwargs)
             self.pelicanAgent = Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
@@ -573,6 +574,7 @@ class Newgame():
             #logger.info('Playing against:'+agent_filepath)  
             kwargs = {}
             kwargs['driving_agent'] = metadata['agentplayer']
+            kwargs['normalise'] = metadata['normalise']
             if image_based == False:
                 observation = Observation(self,**kwargs)
             self.pantherAgent = Panther_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
