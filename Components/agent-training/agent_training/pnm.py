@@ -33,11 +33,11 @@ logger = logging.getLogger(__name__)
 # PARAMS 
 # ######################################################################
 
-TRAINING_STEPS = 100
+TRAINING_STEPS = 250
 PAYOFF_MATRIX_TRIALS = 25
 MAX_ILLEGAL_MOVES_PER_TURN = 2
 NORMALISE = True
-MAX_N_OPPONENTS_TO_SAMPLE = 100 
+MAX_N_OPPONENTS_TO_SAMPLE = 30 # so 28 max for 7 parallel envs
 NUM_PARALLEL_ENVS = 7
 MODEL_TYPE = 'PPO' # 'PPO' instead of 'PPO2' since we are using torch version
 POLICY = 'MlpPolicy'

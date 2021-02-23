@@ -106,7 +106,7 @@ if __name__ == '__main__':
     init_sigma = 1.0
     #Number of children to produce at each generation
     #lambda_ = 20 * num_weights
-    lambda_ = 4
+    lambda_ = 100
     strategy = cma.Strategy(centroid=centroid, sigma=init_sigma, lambda_=lambda_)
 
     toolbox.register("generate", strategy.generate, creator.Individual)
@@ -126,9 +126,9 @@ if __name__ == '__main__':
     stats.register("min", np.min)
     stats.register("max", np.max)
 
-    num_gens = 1
+    num_gens = 200
     population, logbook = algorithms.eaGenerateUpdate(toolbox, ngen=num_gens, 
                                                       stats=stats, halloffame=hof)
 
     #Save video of best agent
-    #save_video(hof[0], panther_agent, num_steps=200, file_name='best_agent.mp4')
+    save_video(hof[0], dummy_agent, num_steps=200, file_name='best_agent.mp4')
