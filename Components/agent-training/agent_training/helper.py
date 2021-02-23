@@ -79,8 +79,8 @@ def train_until(model, env, victory_threshold=0.8, victory_trials=10, max_second
     achieved_goal = max_victory_fraction >= victory_threshold
     return achieved_goal, steps, elapsed_seconds
 
-def check_victory(model,env,trials = 10):
-    victory_count = 0
+def check_victory(model, env, trials):
+
     if isinstance(env, SubprocVecEnv_Torch):
         list_of_reward, n_steps, victories = evaluate_policy_torch(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
     else: 
@@ -90,16 +90,24 @@ def check_victory(model,env,trials = 10):
     modelplayer = env.get_attr('driving_agent')[0]
     logger.info('In check_victory, driving_agent: %s' % modelplayer)
 
-    victory_count = len([v for v in victories if v == True])
-    logger.info('victory_count = %s out of %s' % (victory_count, len(victories))        )
     avg_reward = float(sum(list_of_reward))/len(list_of_reward)
-    logger.info('avg_reward = %.3f' % avg_reward)        
-
+    victory_count = len([v for v in victories if v == True])
+    victory_prop = float(victory_count)/len(victories) 
+    logger.info('victory_prop: %.2f (%s out of %s); avg_reward: %.3f' % 
+                                                      (victory_prop,
+                                                       victory_count, 
+                                                       len(victories),
+                                                       avg_reward
+                                                       ))
     logger.info("===================================================")
 
-    return victory_count, avg_reward
+    return victory_prop, avg_reward, 
 
-def evaluate_policy_torch(model, env, n_eval_episodes=4, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False):
+def evaluate_policy_torch(model, env, n_eval_episodes, deterministic=True, 
+                                                       render=False, 
+                                                       callback=None, 
+                                                       reward_threshold=None, 
+                                                       return_episode_rewards=False):
     """
     Modified from https://stable-baselines.readthedocs.io/en/master/_modules/stable_baselines/common/evaluation.html#evaluate_policy
     to return additional info
