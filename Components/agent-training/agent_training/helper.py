@@ -6,6 +6,7 @@ import logging
 import imageio
 import PIL.Image
 import numpy as np
+import matplotlib.pyplot as plt
 from plark_game import classes
 from gym_plark.envs import plark_env
 from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
@@ -556,3 +557,11 @@ def make_video_plark_env(agent, env, video_file_path, n_steps=10000, fps=10, det
 
     return basewidth,hsize  
 
+def get_fig(df):
+    fig, (ax1,ax2) = plt.subplots(nrows = 2, ncols = 1, sharex = True)
+    df[['NE_Payoff', 'Pelican_BR_Payoff', 'Panther_BR_Payoff']].plot(ax = ax1, fontsize = 6)
+    ax1.legend(loc = 'upper right',prop = {'size': 7})
+    ax1.set_ylabel('Payoff to Pelican')
+    df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind = 'bar', ax = ax2, rot = 0)
+    ax2.tick_params(axis = 'x', which = 'both', labelsize = 6)
+    ax2.legend(loc = 'upper left', prop = {'size': 8})
