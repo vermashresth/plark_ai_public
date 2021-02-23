@@ -14,8 +14,8 @@
             "move_limit": 1,
             "start_col": 5,
             "start_row": 9,
-            "agent_filepath": "panther_nn.py",
-            "agent_name": "PantherNN",
+            "agent_filepath": "pantherAgent_random_walk.py",
+            "agent_name": "Panther_Agent_Random_Walk",
             "render_height": 250 ,
             "render_width": 310
         },

@@ -15,3 +15,5 @@ pytest==5.4.1
 robotframework==3.1.2
 robotframework-seleniumlibrary==4.3.0
 tensorboardx==2.0
+pycddlib
+

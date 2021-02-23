@@ -20,6 +20,9 @@ RUN apt-get -y update \
     libxext6 \
     libxrender1 \
     libxi6 libgconf-2-4 -y \
+    libmpc-dev \
+    libgmp-dev \
+    libmpfr-dev \
     unzip \
     xvfb \
     libopenmpi-dev \

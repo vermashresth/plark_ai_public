@@ -66,6 +66,8 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
 			obs = np.array(obs, dtype=np.uint8)
 		else:
 			obs = self.observation.get_observation(state) 
+		#print("Pelican (opponent) obs:")
+		#print(obs)
 			
 		action, _ = self.model.predict(obs, deterministic=False)
 		return self.action_lookup(action)

@@ -79,8 +79,8 @@ def train_until(model, env, victory_threshold=0.8, victory_trials=10, max_second
     achieved_goal = max_victory_fraction >= victory_threshold
     return achieved_goal, steps, elapsed_seconds
 
-def check_victory(model,env,trials = 10):
-    victory_count = 0
+def check_victory(model, env, trials):
+
     if isinstance(env, SubprocVecEnv_Torch):
         list_of_reward, n_steps, victories = evaluate_policy_torch(model, env, n_eval_episodes=trials, deterministic=False, render=False, callback=None, reward_threshold=None, return_episode_rewards=True)
     else: 
@@ -90,16 +90,24 @@ def check_victory(model,env,trials = 10):
     modelplayer = env.get_attr('driving_agent')[0]
     logger.info('In check_victory, driving_agent: %s' % modelplayer)
 
-    victory_count = len([v for v in victories if v == True])
-    logger.info('victory_count = %s out of %s' % (victory_count, len(victories))        )
     avg_reward = float(sum(list_of_reward))/len(list_of_reward)
-    logger.info('avg_reward = %.3f' % avg_reward)        
-
+    victory_count = len([v for v in victories if v == True])
+    victory_prop = float(victory_count)/len(victories) 
+    logger.info('victory_prop: %.2f (%s out of %s); avg_reward: %.3f' % 
+                                                      (victory_prop,
+                                                       victory_count, 
+                                                       len(victories),
+                                                       avg_reward
+                                                       ))
     logger.info("===================================================")
 
-    return victory_count, avg_reward
+    return victory_prop, avg_reward, 
 
-def evaluate_policy_torch(model, env, n_eval_episodes=4, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False):
+def evaluate_policy_torch(model, env, n_eval_episodes, deterministic=True, 
+                                                       render=False, 
+                                                       callback=None, 
+                                                       reward_threshold=None, 
+                                                       return_episode_rewards=False):
     """
     Modified from https://stable-baselines.readthedocs.io/en/master/_modules/stable_baselines/common/evaluation.html#evaluate_policy
     to return additional info
@@ -210,13 +218,15 @@ def get_env(driving_agent,
             image_based=False, 
             random_panther_start_position=True,
             max_illegal_moves_per_turn = 3,
-            sparse=False):
+            sparse=False,
+            normalise=False):
 
     params = dict(driving_agent = driving_agent,
                   config_file_path = config_file_path,
                   image_based = image_based,
                   random_panther_start_position = random_panther_start_position,
-                  max_illegal_moves_per_turn = max_illegal_moves_per_turn)
+                  max_illegal_moves_per_turn = max_illegal_moves_per_turn,
+                  normalise=normalise)
     
     if opponent != None and driving_agent == 'pelican':
         params.update(panther_agent_filepath = opponent)
@@ -236,14 +246,16 @@ def get_envs(driving_agent,
              max_illegal_moves_per_turn=3,
              sparse=False,
              vecenv=True,
-             mixture=None):
+             mixture=None,
+             normalise=False):
 
     params = dict(driving_agent = driving_agent,
                   config_file_path = config_file_path,
                   image_based = image_based,
                   random_panther_start_position = random_panther_start_position,
                   max_illegal_moves_per_turn = max_illegal_moves_per_turn,
-                  sparse = sparse)
+                  sparse = sparse,
+                  normalise = normalise)
 
     if len(opponents) == 1:
         params.update(opponent=opponents[0])
@@ -280,14 +292,17 @@ def save_model_with_env_settings(basepath,model,modeltype,env,basicdate=None):
 def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,image_based,basicdate=None):
     if basicdate is None:
         basicdate = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-
     modellabel = model_label(modeltype,basicdate,modelplayer)
     model_dir = os.path.join(basepath, modellabel)
     logger.info("Checking folder: " + model_dir)
     os.makedirs(model_dir, exist_ok=True)
     os.chmod(model_dir, 0o777)
     logger.info("Saving Metadata")
-    save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based)
+    if isinstance(model.env, VecEnv) or isinstance(model.env, SubprocVecEnv_Torch):
+        normalise = model.env.get_attr('normalise')[0]
+    else:
+        normalise = model.env.normalise
+    save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based, normalise)
 
     logger.info("Saving Model")
     model_path = os.path.join(model_dir, modellabel + ".zip")
@@ -299,8 +314,7 @@ def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,i
 
 ## Used for generating the json header file which holds details regarding the model.
 ## This will be used when playing the game from the GUI.
-def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_height,render_width,image_based):
-    
+def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_height,render_width,image_based, normalise):
     jsondata = {}
     jsondata['algorithm'] =  modeltype
     jsondata['date'] = str(dateandtime)
@@ -308,6 +322,7 @@ def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_heigh
     jsondata['render_height'] = render_height
     jsondata['render_width'] = render_width
     jsondata['image_based'] = image_based
+    jsondata['normalise'] = normalise
     json_path = os.path.join(model_dir, 'metadata.json')
     with open(json_path, 'w') as outfile:
         json.dump(jsondata, outfile)    

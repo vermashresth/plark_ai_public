@@ -68,6 +68,8 @@ class Panther_Agent_Load_Agent(Panther_Agent):
 		else:
 			obs = self.observation.get_observation(state) 
 
+		#print("Panther (opponent) obs:")
+		#print(obs)
 		action, _ = self.model.predict(obs, deterministic=False)
 		return self.action_lookup(action)
 
