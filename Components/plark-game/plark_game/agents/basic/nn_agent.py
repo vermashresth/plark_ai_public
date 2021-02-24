@@ -75,7 +75,7 @@ class NNAgent(Agent):
         #Final layer goes through a softmax
         layers.append(torch.nn.Softmax(dim=0))
 
-        self.nn = torch.nn.Sequential(*layers)
+        self.nn = torch.nn.Sequential(*layers).double()
 
     #Takes a list, passes through the network and returns a list
     def _forward_pass(self, x):
@@ -180,7 +180,6 @@ class NNAgent(Agent):
         date_time = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
         dir_name = player_type + '_' + date_time
         dir_path = self.base_path + dir_name
-        print("Dir path: ", dir_path)
 
         #Create directory for model
         os.makedirs(dir_path, exist_ok=True)
