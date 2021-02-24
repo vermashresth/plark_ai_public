@@ -11,7 +11,8 @@ import copy
 
 def save_video(genome, agent, env, num_steps, file_name='evo_run.mp4'):
 
-    agent.set_weights(genome)
+    if genome is not None:
+        agent.set_weights(genome)
     video_path = '/' + file_name
     helper.make_video_plark_env(agent, env, video_path, n_steps=num_steps)
 
@@ -48,9 +49,11 @@ def evaluate(genome, config_file_path, driving_agent, normalise):
         if done:
             break
 
-    print("Finished at step num:", step_num)
-    print("Reward:", reward)
-    print("Status:", info['status'])
+    #agent.save_agent(obs_normalise=normalise)
+
+    #print("Finished at step num:", step_num)
+    #print("Reward:", reward)
+    #print("Status:", info['status'])
 
     #save_video(genome, agent, env, max_num_steps, file_name='evo.mp4')
     #exit()
@@ -63,6 +66,7 @@ def evaluate(genome, config_file_path, driving_agent, normalise):
     return [reward]
 
 if __name__ == '__main__':
+
 
     #Env variables
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/balanced_nn.json'
@@ -131,4 +135,4 @@ if __name__ == '__main__':
                                                       stats=stats, halloffame=hof)
 
     #Save video of best agent
-    save_video(hof[0], dummy_agent, num_steps=200, file_name='best_agent.mp4')
+    save_video(hof[0], dummy_agent, dummy_env, num_steps=200, file_name='hof_best_agent.mp4')
