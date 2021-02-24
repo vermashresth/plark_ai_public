@@ -440,7 +440,7 @@ class PNM():
             if i == 2:
                 # Make video
                 video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%d.mp4' % i)
-                basewidth,hsize = helper.make_video(self.pelican_model, pelican_env, video_path)
+                basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
 
 
         logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
