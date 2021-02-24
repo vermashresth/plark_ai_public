@@ -438,6 +438,12 @@ class PNM():
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
+            # occasionally ouput useful things along the way
+            if i == 2:
+                # Make video
+                video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%d.mp4' % i)
+                basewidth,hsize = helper.make_video(self.pelican_model, pelican_env, video_path)
+
         logger.info('Training pelican total steps: ' + str(pelican_training_steps))
         logger.info('Training panther total steps: ' + str(panther_training_steps))
         # Store DF for printing
