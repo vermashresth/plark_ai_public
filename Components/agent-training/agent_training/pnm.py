@@ -3,6 +3,7 @@
 # #!pip install stable-baselines3
 # The following is needed on the DGX:
 # #!pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+
 import sys
 sys.path.insert(1, '/Components/')
 
@@ -10,12 +11,9 @@ import datetime
 import numpy as np
 import pandas as pd
 import os
-import gc
 import glob
-from tensorboardX import SummaryWriter
 import helper
 import lp_solve
-import torch
 import matplotlib.pyplot as plt
 import time
 import itertools
@@ -27,7 +25,6 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 class PNM():
 
     # Python constructor to initialise the players within the gamespace.
@@ -38,31 +35,44 @@ class PNM():
         # PARAMS
         # ######################################################################
 
+        # Path related args
+        config_file_path                = kwargs.get('config_file_path', '/Components/plark-game/plark_game/game_config/10x10/balanced.json')
+        self.basicdate                  = kwargs.get('basicdate', str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
+        basepath                        = kwargs.get('basepath', '/data/agents/models')
+        
+        # Training, evaluation steps, opponents, etc:
         self.training_steps             = kwargs.get('training_steps', 250) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
-        self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2) 
-        normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
+        
+        # Model training params:
+        normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
         self.num_parallel_envs          = kwargs.get('num_parallel_envs', 7) # Used determine envs in VecEnv
         self.model_type                 = kwargs.get('model_type', 'PPO') # 'PPO' instead of 'PPO2' since we are using torch version
         self.policy                     = kwargs.get('policy', 'MlpPolicy') # Feature extractors
         self.parallel                   = kwargs.get('parallel', True) # Keep it true while working with PPO
-        config_file_path                = kwargs.get('config_file_path', '/Components/plark-game/plark_game/game_config/10x10/balanced.json')
-        self.basicdate                  = kwargs.get('basicdate', str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
-        basepath                        = kwargs.get('basepath', '/data/agents/models')
+        
         self.initial_pelicans           = kwargs.get('initial_pelicans', []) # Specify paths to existing agents if available.
         self.initial_panthers           = kwargs.get('initial_panthers', []) # '' ''
-        self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.        
+        self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
-        sparse                          = kwargs.get('sparse', False) # Set to true for sparse rewards. 
+        sparse                          = kwargs.get('sparse', False) # Set to true for sparse rewards.
+
+        # Game specific:
+        self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
+                
+        # Video Args:
+        self.video_steps                = kwargs.get('video_steps', 1000) # N steps used to create videos        
+        self.basewidth                  = kwargs.get('basewidth', 2048) # Increase/decrease for high/low resolution videos.
+        self.fps                        = kwargs.get('fps', 2) # Videos with lower values are easier to interpret.
 
         # Path to experiment folder
         exp_name = 'test_' + self.basicdate
         self.exp_path = os.path.join(basepath, exp_name)
         logger.info(self.exp_path)
 
-        # Models are saved to: 
+        # Models are saved to:
         self.pelicans_tmp_exp_path = os.path.join(self.exp_path, 'pelicans_tmp')
         os.makedirs(self.pelicans_tmp_exp_path, exist_ok = True)
         self.panthers_tmp_exp_path = os.path.join(self.exp_path, 'panthers_tmp')
@@ -106,6 +116,7 @@ class PNM():
                                            vecenv = self.parallel,
                                            normalise = normalise)
 
+
     def compute_initial_payoffs(self):
         # If I appended multiple entries all together
         if len(self.initial_pelicans) > 0:
@@ -125,7 +136,7 @@ class PNM():
                 path = glob.glob(panther + "/*.zip")[0]
                 self.panther_model = helper.loadAgent(path, self.model_type)
             else:
-                self.panther_model = None 
+                self.panther_model = None
             self.compute_payoff_matrix(self.pelicans[:min(j + 1, len(self.pelicans))],
                                        self.panthers[:min(j + 1, len(self.panthers))])
 
@@ -145,8 +156,8 @@ class PNM():
         if self.pelican_model is not None:
             for i, opponent in enumerate(panthers):
                 self.pelican_env.env_method('set_panther_using_path', opponent)
-                victory_prop, avg_reward = helper.check_victory(self.pelican_model, 
-                                                                self.pelican_env, 
+                victory_prop, avg_reward = helper.check_victory(self.pelican_model,
+                                                                self.pelican_env,
                                                                 trials = self.payoff_matrix_trials)
                 self.payoffs[-1, i] = victory_prop
 
@@ -154,8 +165,8 @@ class PNM():
         if self.panther_model is not None:
             for i, opponent in enumerate(pelicans):
                 self.panther_env.env_method('set_pelican_using_path', opponent)
-                victory_prop, avg_reward = helper.check_victory(self.panther_model, 
-                                                                self.panther_env, 
+                victory_prop, avg_reward = helper.check_victory(self.panther_model,
+                                                                self.panther_env,
                                                                 trials = self.payoff_matrix_trials)
                 self.payoffs[i, -1] = 1 - victory_prop # do in terms of pelican
 
@@ -226,9 +237,9 @@ class PNM():
         agent_filepath = os.path.dirname(agent_filepath)
         return agent_filepath
 
-    def train_agent(self, 
+    def train_agent(self,
                     exp_path,        # Path for saving the agent
-                    model,           
+                    model,
                     env,             # Can be either single env or vec env
                     previous_steps): # Used to keep track of number of steps in total
 
@@ -248,9 +259,9 @@ class PNM():
         # If no initial pelican agent is given, we train one from fresh
         if len(self.initial_pelicans) == 0:
             # Train initial pelican vs default panther
-            self.pelican_model = helper.make_new_model(self.model_type, 
-                                                       self.policy, 
-                                                       self.pelican_env, 
+            self.pelican_model = helper.make_new_model(self.model_type,
+                                                       self.policy,
+                                                       self.pelican_env,
                                                        n_steps=self.training_steps)
             logger.info('Training initial pelican')
             pelican_agent_filepath = self.train_agent(self.pelicans_tmp_exp_path,
@@ -265,9 +276,9 @@ class PNM():
         # If no initial panther agent is given, we train one from fresh
         if len(self.initial_panthers) == 0:
             # Train initial panther agent vs default pelican
-            self.panther_model = helper.make_new_model(self.model_type, 
-                                                       self.policy, 
-                                                       self.panther_env, 
+            self.panther_model = helper.make_new_model(self.model_type,
+                                                       self.policy,
+                                                       self.panther_env,
                                                        n_steps=self.training_steps)
             logger.info('Training initial panther')
             panther_agent_filepath  = self.train_agent(self.panthers_tmp_exp_path,
@@ -403,11 +414,11 @@ class PNM():
                 path = glob.glob(path + "/*.zip")[0]
                 self.pelican_model = helper.loadAgent(path, self.model_type)
             else:
-                self.pelican_model = helper.make_new_model(self.model_type, 
-                                                           self.policy, 
-                                                           self.pelican_env, 
+                self.pelican_model = helper.make_new_model(self.model_type,
+                                                           self.policy,
+                                                           self.pelican_env,
                                                            n_steps=self.training_steps)
-                    
+
             pelican_agent_filepath = self.train_agent_against_mixture('pelican',
                                                                       self.pelicans_tmp_exp_path,
                                                                       self.pelican_model,
@@ -423,11 +434,11 @@ class PNM():
                 path = glob.glob(path + "/*.zip")[0]
                 self.panther_model = helper.loadAgent(path, self.model_type)
             else:
-                self.panther_model = helper.make_new_model(self.model_type, 
-                                                           self.policy, 
-                                                           self.panther_env, 
+                self.panther_model = helper.make_new_model(self.model_type,
+                                                           self.policy,
+                                                           self.panther_env,
                                                            n_steps=self.training_steps)
-                
+
             panther_agent_filepath = self.train_agent_against_mixture('panther',
                                                                      self.panthers_tmp_exp_path,
                                                                      self.panther_model,
@@ -438,14 +449,41 @@ class PNM():
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
-        logger.info('Training pelican total steps: ' + str(pelican_training_steps))
-        logger.info('Training panther total steps: ' + str(panther_training_steps))
+            testing_interval = 5
+            # if i % testing_interval == 0:
+            if True:
+                # occasionally ouput useful things along the way
+                # Make videos
+                verbose = False
+                video_path =  os.path.join(self.exp_path, 'pelican_pnm_iter_%02d.mp4' % i)
+                basewidth,hsize = helper.make_video_VEC_ENV(self.pelican_model, 
+                                                            self.pelican_env, 
+                                                            video_path,
+                                                            fps=self.fps,
+                                                            basewidth=self.basewidth,
+                                                            n_steps=self.video_steps,
+                                                            verbose=verbose)
+                                                            
+                video_path =  os.path.join(self.exp_path, 'panther_pnm_iter_%02d.mp4' % i)
+                basewidth,hsize = helper.make_video_VEC_ENV(self.panther_model, 
+                                                            self.panther_env, 
+                                                            video_path,
+                                                            fps=self.fps,
+                                                            basewidth=self.basewidth,
+                                                            n_steps=self.video_steps,
+                                                            verbose=verbose)
+
+
+        logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
+        logger.info('Training panther total steps: ' + str(self.panther_training_steps))
         # Store DF for printing
         df_path = os.path.join(self.exp_path, "values.csv")
         df.to_csv(df_path, index = False)
+
+        # DOESN'T WORK WITH VEC ENVS
         # Make video
-        video_path =  os.path.join(self.exp_path, 'test_pnm.mp4')
-        basewidth,hsize = helper.make_video(self.pelican_model, pelican_env, video_path)
+        # video_path =  os.path.join(self.exp_path, 'test_pnm.mp4')
+        # basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
 
         # Saving final mixture and corresponding agents
         support_pelicans = np.nonzero(mixture_pelicans)[0]
@@ -453,25 +491,25 @@ class PNM():
         np.save(self.exp_path + '/mixture_pelicans.npy', mixture_pelicans)
         for i, idx in enumerate(mixture_pelicans):
             self.pelican_model = helper.loadAgent(self.pelicans[i], self.model_type)
-            agent_filepath ,_, _= helper.save_model_with_env_settings(self.pelicans_tmp_exp_path, 
-                                                                      self.pelican_model, 
-                                                                      self.model_type, 
-                                                                      pelican_env, 
+            agent_filepath ,_, _= helper.save_model_with_env_settings(self.pelicans_tmp_exp_path,
+                                                                      self.pelican_model,
+                                                                      self.model_type,
+                                                                      self.pelican_env,
                                                                       self.basicdate + "_ps_" + str(i))
         support_panthers = np.nonzero(mixture_panthers)[0]
         mixture_panthers = mixture_panthers[support_panthers]
         np.save(self.exp_path + '/mixture_panthers.npy', mixture_panthers)
         for i, idx in enumerate(mixture_panthers):
             self.panther_model = helper.loadAgent(self.panthers[i], self.model_type)
-            agent_filepath ,_, _= helper.save_model_with_env_settings(panthers_tmp_exp_path, 
-                                                                      self.panther_model, 
-                                                                      self.model_type, 
-                                                                      self.panther_env, 
+            agent_filepath ,_, _= helper.save_model_with_env_settings(self.panthers_tmp_exp_path,
+                                                                      self.panther_model,
+                                                                      self.model_type,
+                                                                      self.panther_env,
                                                                       self.basicdate + "_ps_" + str(i))
         return video_path, basewidth, hsize
 
+if __name__ == '__main__':
 
-def main():
     #examples_dir = '/data/examples'
     # Initial sets of opponents is automatically loaded from dir
     #pelicans_start_opponents = [p.path for p in os.scandir(examples_dir + '/pelicans') if p.is_dir()]
@@ -480,11 +518,9 @@ def main():
     #panthers_start_opponents = ["data/examples/panthers_tmp/PPO_20210220_152444_steps_" + str(i * 100) + "_panther" for i in range(1, 7)]
     pelicans_start_opponents = []
     panthers_start_opponents = []
-    
+
     pnm = PNM(initial_pelicans = pelicans_start_opponents,
               initial_panthers = panthers_start_opponents)
 
     pnm.run_pnm()
-
-if __name__ == '__main__':
     main()

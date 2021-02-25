@@ -25,6 +25,9 @@ from stable_baselines3.common.vec_env import SubprocVecEnv as SubprocVecEnv_Torc
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+DEFAULT_FPS = 3   # Originally was 10
+BASEWIDTH = 512 # Originally was 512, increase/decrease for higher/lower resolution
+
 def model_label(modeltype,basicdate,modelplayer):
     label = modeltype + "_" + str(basicdate) + "_" + modelplayer
     return label
@@ -220,14 +223,16 @@ def get_env(driving_agent,
             random_panther_start_position=True,
             max_illegal_moves_per_turn = 3,
             sparse=False,
-            normalise=False):
+            normalise=False,
+            is_in_vec_env=False):
 
     params = dict(driving_agent = driving_agent,
                   config_file_path = config_file_path,
                   image_based = image_based,
                   random_panther_start_position = random_panther_start_position,
                   max_illegal_moves_per_turn = max_illegal_moves_per_turn,
-                  normalise=normalise)
+                  normalise=normalise,
+                  is_in_vec_env=is_in_vec_env)
     
     if opponent != None and driving_agent == 'pelican':
         params.update(panther_agent_filepath = opponent)
@@ -256,7 +261,8 @@ def get_envs(driving_agent,
                   random_panther_start_position = random_panther_start_position,
                   max_illegal_moves_per_turn = max_illegal_moves_per_turn,
                   sparse = sparse,
-                  normalise = normalise)
+                  normalise = normalise,
+                  is_in_vec_env=vecenv)
 
     if len(opponents) == 1:
         params.update(opponent=opponents[0])
@@ -478,8 +484,38 @@ def load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, pa
 
     return video_file, game.gameState ,video_file_path
 
+def make_video_VEC_ENV(model, env, video_file_path,n_steps = 10000,fps=DEFAULT_FPS,deterministic=False,basewidth=BASEWIDTH,verbose=False):
+    # Test the trained agent
+    # This is when you have a stable baselines model and an gym env
+    obs = env.reset()
+    writer = imageio.get_writer(video_file_path, fps=fps) 
+    hsize = None
+    for step in range(n_steps):
 
-def make_video(model,env,video_file_path,n_steps = 10000,fps=10,deterministic=False,basewidth = 512,verbose =False):
+        #######################################################################
+        # Get image and comvert back to PIL.Image
+        try:
+            image = PIL.Image.fromarray(env.render(mode='rgb_array'))
+        except:
+            print("NOT WORKED TO CONVERT BACK TO PIL")
+        #######################################################################
+
+        action, _ = model.predict(obs, deterministic=deterministic)
+    
+        obs, reward, done, info = env.step(action)
+        if verbose:
+            logger.info("Step: "+str(step)+" Action: "+str(action)+' Reward:'+str(reward)+' Done:'+str(done))
+
+        if hsize is None:
+            wpercent = (basewidth/float(image.size[0]))
+            hsize = int((float(image.size[1])*float(wpercent)))
+        res_image = image.resize((basewidth,hsize), PIL.Image.ANTIALIAS)
+        writer.append_data(np.copy(np.array(res_image)))
+    writer.close()  
+    return basewidth,hsize      
+
+
+def make_video(model,env,video_file_path,n_steps = 10000,fps=DEFAULT_FPS,deterministic=False,basewidth=BASEWIDTH,verbose =False):
     # Test the trained agent
     # This is when you have a stable baselines model and an gym env
     obs = env.reset()
@@ -505,7 +541,7 @@ def make_video(model,env,video_file_path,n_steps = 10000,fps=10,deterministic=Fa
     writer.close()  
     return basewidth,hsize      
 
-def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps = 10000,fps=10,deterministic=False,basewidth = 512,verbose =False):
+def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps = 10000,fps=DEFAULT_FPS,deterministic=False,basewidth=BASEWIDTH,verbose =False):
     # Test the trained agent
     # This is when you have a plark game agent and a plark game 
     game.reset_game()
@@ -528,7 +564,7 @@ def new_make_video(agent,game,video_file_path,renderWidth, renderHeight, n_steps
     writer.close()  
     return basewidth,hsize  
 
-def make_video_plark_env(agent, env, video_file_path, n_steps=10000, fps=10, deterministic=False, basewidth=512, verbose=False):
+def make_video_plark_env(agent, env, video_file_path, n_steps=10000, fps=DEFAULT_FPS, deterministic=False, basewidth=BASEWIDTH, verbose=False):
 
     print("Recording video...")
 
