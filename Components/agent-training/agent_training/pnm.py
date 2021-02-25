@@ -187,7 +187,7 @@ class PNM():
         
         for _ in range(n_rbbrs):
         
-            model = self.bootstrap(protagonist_filepaths, env,protagonist_mixture)
+            model = self.bootstrap(protagonist_filepaths, env, protagonist_mixture)
             
             filepaths.append(self.train_agent_against_mixture(exp_path,
                                                                 driving_agent,
@@ -285,7 +285,7 @@ class PNM():
                 victories.append(victory_prop)
                 avg_rewards.append(avg_reward)
 
-        return mean(victories)#, mean(avg_rewards)
+        return np.mean(victories)#, np.mean(avg_rewards)
             
                 
     def train_agent_against_mixture(self,
