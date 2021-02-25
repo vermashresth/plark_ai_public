@@ -11,7 +11,8 @@ import copy
 
 def save_video(genome, agent, env, num_steps, file_name='evo_run.mp4'):
 
-    agent.set_weights(genome)
+    if genome is not None:
+        agent.set_weights(genome)
     video_path = '/' + file_name
     helper.make_video_plark_env(agent, env, video_path, n_steps=num_steps)
 
@@ -36,46 +37,40 @@ def evaluate(genome, config_file_path, driving_agent, normalise):
     env.reset()
 
     max_num_steps = 200
-    #max_num_steps = 10
 
     reward = 0
     obs = env._observation()
     for step_num in range(max_num_steps):
-        #print("Step num", step_num)
         action = agent.getAction(obs)    
         obs, r, done, info = env.step(action)
         reward += r
         if done:
             break
 
-    print("Finished at step num:", step_num)
-    print("Reward:", reward)
-    print("Status:", info['status'])
+    #agent.save_agent(obs_normalise=normalise)
+
+    #print("Finished at step num:", step_num)
+    #print("Reward:", reward)
+    #print("Status:", info['status'])
 
     #save_video(genome, agent, env, max_num_steps, file_name='evo.mp4')
     #exit()
-
-    #if info['status'] == "PELICANWIN":
-    #    save_video(genome, agent, env, max_num_steps, file_name='pelican_win.mp4')
-    #if info['status'] == "ESCAPE":
-    #    save_video(genome, agent, env, max_num_steps, file_name='escape.mp4')
 
     return [reward]
 
 if __name__ == '__main__':
 
     #Env variables
-    config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/balanced_nn.json'
+    config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/nn_single_agent_balanced.json'
     #trained_agent = 'panther'
     trained_agent = 'pelican'
-    normalise = True
-
+    normalise_obs = True
 
     #Instantiate dummy env and dummy agent
     #I need to do this to ascertain the number of weights needed in the optimisation
     #procedure
     dummy_env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
-                               driving_agent=trained_agent, normalise=normalise)
+                               driving_agent=trained_agent, normalise=normalise_obs)
 
     #Neural net variables
     num_inputs = len(dummy_env._observation())
@@ -96,7 +91,7 @@ if __name__ == '__main__':
 
     toolbox = base.Toolbox()
     toolbox.register("evaluate", evaluate, config_file_path=config_file_path, 
-                     driving_agent=trained_agent, normalise=normalise)
+                     driving_agent=trained_agent, normalise=normalise_obs)
 
     #np.random.seed(108)
 
@@ -112,7 +107,7 @@ if __name__ == '__main__':
     toolbox.register("generate", strategy.generate, creator.Individual)
     toolbox.register("update", strategy.update)
 
-    parallelise = False
+    parallelise = True
     if parallelise:
         import multiprocessing
 
@@ -131,4 +126,4 @@ if __name__ == '__main__':
                                                       stats=stats, halloffame=hof)
 
     #Save video of best agent
-    save_video(hof[0], dummy_agent, num_steps=200, file_name='best_agent.mp4')
+    save_video(hof[0], dummy_agent, dummy_env, num_steps=200, file_name='hof_best_agent.mp4')
