@@ -47,6 +47,8 @@ class PNM():
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
+
+        self.exploit_steps              = kwargs.get('exploit_steps', 0.001) # Steps for testing exploitabilty
         
         # Model training params:
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
@@ -139,6 +141,7 @@ class PNM():
             self.compute_payoff_matrix(self.pelicans[:min(j + 1, len(self.pelicans))],
                                        self.panthers[:min(j + 1, len(self.panthers))])
 
+              
     def compute_payoff_matrix(self, pelicans, panthers):
         """
         - Pelican strategies are rows; panthers are columns
@@ -169,6 +172,108 @@ class PNM():
                                                                 trials = self.payoff_matrix_trials)
                 self.payoffs[i, -1] = 1 - victory_prop # do in terms of pelican
 
+    def iter_train_against_mixture(self,
+                                   n_rbbrs, # Number of resource bounded best responses
+                                   exp_path,
+                                   driving_agent, # agent that we train
+                                   env, # Can either be a single env or subvecproc
+                                   opponent_policy_fpaths, # policies of opponent of driving agent
+                                   opponent_mixture): 
+        
+        win_percentages = []
+        
+        for _ in range(n_rbbrs):
+        
+            self.model = helper.make_new_model(self.model_type,
+                                               self.policy,
+                                               env,
+                                               n_steps=self.exploit_steps)
+
+            filepath = self.train_agent_against_mixture(driving_agent,
+                                                        exp_path,
+                                                        model,
+                                                        env,
+                                                        opponent_policy_fpaths,
+                                                        opponent_mixture,
+                                                        self.exploit_steps)
+        
+            win_percentages.append(self.eval_agent_against_mixture(driving_agent, # Yet to be implemented
+                                                             exp_path,
+                                                             model,
+                                                             env,
+                                                             opponent_policy_fpaths,
+                                                             opponent_mixture)) 
+
+            
+            
+    def eval_agent_against_mixture(self,
+                                    exp_path,
+                                    driving_agent, # agent that we train
+                                    model,
+                                    env, # Can either be a single env or subvecproc
+                                    opponent_policy_fpaths, # policies of opponent of driving agent
+                                    opponent_mixture): # mixture of opponent of driving agent
+
+        ################################################################
+        # Heuristic to compute number of opponents to sample as mixture
+        ################################################################
+        # Min positive probability
+        min_prob = min([pr for pr in opponent_mixture if pr > 0])
+        target_n_opponents = self.num_parallel_envs * int(1.0 / min_prob)
+        n_opponents = min(target_n_opponents, self.max_n_opponents_to_sample)
+
+        if self.parallel:
+            # Ensure that n_opponents is a multiple of
+            n_opponents = self.num_parallel_envs * round(n_opponents / self.num_parallel_envs)
+
+        logger.info("=============================================")
+        logger.info("Sampling %d opponents" % n_opponents)
+        logger.info("=============================================")
+
+        # Sample n_opponents
+        opponents = np.random.choice(opponent_policy_fpaths,
+                                     size = n_opponents,
+                                     p = opponent_mixture)
+
+        logger.info("=============================================")
+        logger.info("Opponents has %d elements" % len(opponents))
+        logger.info("=============================================")
+
+        # If we use parallel envs, we run all the training against different sampled opponents in parallel
+        if self.parallel:
+            # Method to load new opponents via filepath
+            setter = 'set_panther_using_path' if driving_agent == 'pelican' else 'set_pelican_using_path'
+            for i, opponent in enumerate(opponents):
+                # Stick this in the right slot, looping back after self.num_parallel_envs
+                env.env_method(setter, opponent, indices = [i % self.num_parallel_envs])
+                # When we have filled all self.num_parallel_envs, then train
+                if i > 0 and (i + 1) % self.num_parallel_envs == 0:
+                    logger.info("Beginning parallel training for {} steps".format(self.training_steps))
+                    model.set_env(env)
+
+                    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # Check victory 
+
+        # Otherwise we sample different opponents and we train against each of them separately
+        else:
+            for opponent in opponents:
+                if driving_agent == 'pelican':
+                    env.set_panther_using_path(opponent)
+                else:
+                    env.set_pelican_using_path(opponent)
+                logger.info("Beginning sequential training for {} steps".format(self.training_steps))
+                model.set_env(env)
+                #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                # Check victory 
+
+        # Save agent
+        logger.info('Finished train agent')
+        savepath = self.basicdate + '_steps_' + str(previous_steps)
+        agent_filepath, _, _= helper.save_model_with_env_settings(exp_path, model, self.model_type, env, savepath)
+        agent_filepath = os.path.dirname(agent_filepath)
+        return # W percentage
+            
+                
     def train_agent_against_mixture(self,
                                     exp_path,
                                     driving_agent, # agent that we train
