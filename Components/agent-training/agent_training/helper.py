@@ -486,15 +486,25 @@ def make_video_VEC_ENV(model,env,video_file_path,n_steps = 10000,fps=10,determin
     hsize = None
     for step in range(n_steps):
         image = env.render(mode='rgb_array')
-        # TODO: use get_images directly somehow with the 
+
+        #######################################################################
+        # OLD:
+        # image = env.render(view='ALL')
+
+        # Changes to work with ven envs
+
+        # TODO change get_images:
+        # stable_baselines3/common/vec_env/base_vec_env.py in render
+        # THIS SHOULD BE MOVED TO get_images()
         # imgs = [np.array(i) for i in imgs]
+
+        # comvert back to PIL.Image
         try:
-            print(image.shape)
             image = PIL.Image.fromarray(image)
         except:
             print("NOT WORKED TO CONVERT BACK TO PIL")
+        #######################################################################
 
-        # image = env.render(view='ALL')
         action, _ = model.predict(obs, deterministic=deterministic)
     
         obs, reward, done, info = env.step(action)

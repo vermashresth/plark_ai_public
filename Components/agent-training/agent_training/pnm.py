@@ -439,29 +439,16 @@ class PNM():
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
-            # occasionally ouput useful things along the way
             # if i == 0:
             if True:
-                logger.info("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                logger.info("VIDEO TIME^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                # occasionally ouput useful things along the way
                 # Make video
-                video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%d.mp4' % i)
-                logger.info("video_path: %s" % video_path)
-                logger.info('self.pelican_env.num_envs: %s' % self.pelican_env.num_envs)
-                logger.info("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-
+                video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%02d.mp4' % i)
                 basewidth,hsize = helper.make_video_VEC_ENV(self.pelican_model, 
                                                             self.pelican_env, 
                                                             video_path,
                                                             n_steps=100,
                                                             verbose=True)
-                # TESTING VEC VIDEO RECORDER
-                # temp_env = VecVideoRecorder(self.pelican_env, 
-                                                    # self.exp_path, 
-                                                    # record_video_trigger=lambda x: x == 0)
-                
-
-
 
         logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
         logger.info('Training panther total steps: ' + str(self.panther_training_steps))
