@@ -63,7 +63,7 @@ def load_combatant(
 
     if ".py" in agent_path:
         return load_agent(
-            agent_path, agent_name, basic_agents_path, game, **kwargs
+            agent_path, agent_name, basic_agents_path, game, in_tournament=True,**kwargs
         )
     else:
 
@@ -91,6 +91,7 @@ def load_combatant(
                         agent_name,
                         basic_agents_path,
                         game,
+                        in_tournament=True,
                         **kwargs
                     )
 
@@ -127,12 +128,34 @@ class Combatant:
         self.ready = False
 
     def get_action(self, ch, method, props, body):
+        """
+        Participants: you may want to modify this function, if you're not using
+        a stable_baselines agent
+        """
+        message = json.loads(body)
+        # 'state' is the state information that can be known by the agent
+        # (i.e. the panther position is hidden from pelican agents, etc.)
+        state = message["state"]
+        # 'obs' is a list of numbers, representing the state in the format that
+        # is expected by stable_baselines
+        obs = message["obs"]
+        # 'obs_normalised' is the same as `obs`, but normalised such that values
+        # lie between 0 and 1
+        obs_normalised = message["obs_normalised"]
+        # 'domain_parameters' is the parameters of the domain
+        domain_parameters = message["domain_parameters"]
 
-        state = json.loads(body)
         # convert json objects back into e.g. Torpedo instances
         deserialized_state = deserialize_state(state)
-        # ask the agent for the action, given this state
-        response = self.agent.getAction(deserialized_state)
+
+        # ask the agent for the action, given this observation ( or state, ...)
+        # below is an example using a stable_baselines agent, that just expects
+        # the observation.
+        # Modify this function call if you have a different
+        # type of agent that expects different information.
+        response = self.agent.getTournamentAction(obs, obs_normalised, domain_parameters, state)
+
+        # send the action back to the battle
         ch.basic_publish(
             exchange="",
             routing_key=props.reply_to,
