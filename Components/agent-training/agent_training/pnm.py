@@ -41,7 +41,7 @@ class PNM():
         basepath                        = kwargs.get('basepath', '/data/agents/models')
         
         # Training, evaluation steps, opponents, etc:
-        self.training_steps             = kwargs.get('training_steps', 250) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 25) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
@@ -189,22 +189,31 @@ class PNM():
         
             model = self.bootstrap(protagonist_filepaths, env,protagonist_mixture)
             
-            filepaths.append(self.train_agent_against_mixture(driving_agent,
-                                                        exp_path,
-                                                        model,
-                                                        env,
-                                                        opponent_policy_fpaths,
-                                                        opponent_mixture,
-                                                        self.exploit_steps))
+            filepaths.append(self.train_agent_against_mixture(exp_path,
+                                                                driving_agent,
+                                                                model,
+                                                                env,
+                                                                opponent_policy_fpaths,
+                                                                opponent_mixture,
+                                                                self.exploit_steps))
+
+    def train_agent_against_mixture(self,
+                                    exp_path,
+                                    driving_agent, # agent that we train
+                                    model,
+                                    env, # Can either be a single env or subvecproc
+                                    opponent_policy_fpaths, # policies of opponent of driving agent
+                                    opponent_mixture, # mixture of opponent of driving agent
+                                    previous_steps):
         
-            win_percentages.append(self.eval_agent_against_mixture(driving_agent,
-                                                                   exp_path,
-                                                                   model,
-                                                                   env,
-                                                                   opponent_policy_fpaths,
-                                                                   opponent_mixture,
-                                                                   self.payoff_matrix_trials)) 
-        
+        win_percentages.append(self.eval_agent_against_mixture(exp_path,
+                                                                driving_agent,
+                                                                model,
+                                                                env,
+                                                                opponent_policy_fpaths,
+                                                                opponent_mixture,
+                                                                self.payoff_matrix_trials))
+
         return filepaths, win_percentages
             
 
@@ -528,7 +537,7 @@ class PNM():
             # Train from skratch or retrain an existing model for pelican
             logger.info('Training pelican')
             
-            self.pelican_model = bootstrap(self.pelicans, self.pelican_env, mixture_pelicans)
+            self.pelican_model = self.bootstrap(self.pelicans, self.pelican_env, mixture_pelicans)
                 
             pelican_agent_filepath = self.train_agent_against_mixture('pelican',
                                                                       self.pelicans_tmp_exp_path,
@@ -544,7 +553,7 @@ class PNM():
             # Train from scratch or retrain an existing model for panther
             logger.info('Training panther')
             
-            self.panther_model = bootstrap(self.panthers, self.panther_env, mixture_panthers)
+            self.panther_model = self.bootstrap(self.panthers, self.panther_env, mixture_panthers)
             
             panther_agent_filepath = self.train_agent_against_mixture('panther',
                                                                      self.panthers_tmp_exp_path,
@@ -558,7 +567,37 @@ class PNM():
 
             testing_interval = 5
             # if i % testing_interval == 0:
-            if True:
+            if i > 0:
+                n_rbbrs = 10
+                # Find best pelican (protagonist) against panther (opponent) mixture
+                candidate_pelican_rbbr_fpaths, candidate_pelican_rbbr_win_percentages = self.iter_train_against_mixture(
+                                                n_rbbrs, # Number of resource bounded best responses
+                                                self.pelicans_tmp_exp_path,
+                                                self.pelican_model, # driving_agent, # agent that we train
+                                                self.pelican_env, # env, # Can either be a single env or subvecproc
+                                                self.pelicans, # Filepaths to existing models
+                                                mixture_pelicans, # mixture for bootstrapping
+                                                self.panthers, # opponent_policy_fpaths, # policies of opponent of driving agent
+                                                mixture_panthers) # opponent_mixture)
+
+                logger.info("################################################")
+                logger.info(candidate_pelican_rbbr_win_percentages)
+                logger.info("################################################")
+
+                candidate_panther_rbbr_fpaths, candidate_panther_rbbr_win_percentages = self.iter_train_against_mixture(
+                                                n_rbbrs, # Number of resource bounded best responses
+                                                self.panthers_tmp_exp_path,
+                                                self.panther_model, # driving_agent, # agent that we train
+                                                self.panther_env, # env, # Can either be a single env or subvecproc
+                                                self.panthers, # Filepaths to existing models
+                                                mixture_panthers, # mixture for bootstrapping
+                                                self.pelicans, # opponent_policy_fpaths, # policies of opponent of driving agent
+                                                mixture_pelicans) # opponent_mixture)
+
+                logger.info("################################################")
+                logger.info(candidate_panther_rbbr_win_percentages)
+                logger.info("################################################")
+
                 # occasionally ouput useful things along the way
                 # Make videos
                 verbose = False
