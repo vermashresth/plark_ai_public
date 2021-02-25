@@ -177,42 +177,56 @@ class PNM():
                                    exp_path,
                                    driving_agent, # agent that we train
                                    env, # Can either be a single env or subvecproc
+                                   protagonist_filepaths, # Filepaths to existing models
+                                   protagonist_mixture, # mixture for bootstrapping
                                    opponent_policy_fpaths, # policies of opponent of driving agent
                                    opponent_mixture): 
         
         win_percentages = []
+        filepaths = []
         
         for _ in range(n_rbbrs):
         
-            self.model = helper.make_new_model(self.model_type,
-                                               self.policy,
-                                               env,
-                                               n_steps=self.exploit_steps)
-
-            filepath = self.train_agent_against_mixture(driving_agent,
+            model = self.bootstrap(protagonist_filepaths, env,protagonist_mixture)
+            
+            filepaths.append(self.train_agent_against_mixture(driving_agent,
                                                         exp_path,
                                                         model,
                                                         env,
                                                         opponent_policy_fpaths,
                                                         opponent_mixture,
-                                                        self.exploit_steps)
+                                                        self.exploit_steps))
         
-            win_percentages.append(self.eval_agent_against_mixture(driving_agent, # Yet to be implemented
-                                                             exp_path,
-                                                             model,
-                                                             env,
-                                                             opponent_policy_fpaths,
-                                                             opponent_mixture)) 
+            win_percentages.append(self.eval_agent_against_mixture(driving_agent,
+                                                                   exp_path,
+                                                                   model,
+                                                                   env,
+                                                                   opponent_policy_fpaths,
+                                                                   opponent_mixture,
+                                                                   self.payoff_matrix_trials)) 
+        
+        return filepaths[np.argmin(win_percentages)], max(win_percentages)
+            
 
-            
-            
+    def bootstrap(self, model_paths, env, mixture):
+        if np.random.rand(1) < self.retraining_prob:
+            path = np.random.choice(model_paths, 1, p = mixture)[0]
+            path = glob.glob(path + "/*.zip")[0]
+            return helper.loadAgent(path, self.model_type)
+        else:
+            return helper.make_new_model(self.model_type,
+                                         self.policy,
+                                         env,
+                                         n_steps=self.training_steps)
+                       
     def eval_agent_against_mixture(self,
                                     exp_path,
                                     driving_agent, # agent that we train
                                     model,
                                     env, # Can either be a single env or subvecproc
                                     opponent_policy_fpaths, # policies of opponent of driving agent
-                                    opponent_mixture): # mixture of opponent of driving agent
+                                    opponent_mixture, # mixture of opponent of driving agent
+                                    n_eps): # number of eval eps
 
         ################################################################
         # Heuristic to compute number of opponents to sample as mixture
@@ -239,6 +253,8 @@ class PNM():
         logger.info("Opponents has %d elements" % len(opponents))
         logger.info("=============================================")
 
+        victories = []
+        avg_rewards = []
         # If we use parallel envs, we run all the training against different sampled opponents in parallel
         if self.parallel:
             # Method to load new opponents via filepath
@@ -248,12 +264,14 @@ class PNM():
                 env.env_method(setter, opponent, indices = [i % self.num_parallel_envs])
                 # When we have filled all self.num_parallel_envs, then train
                 if i > 0 and (i + 1) % self.num_parallel_envs == 0:
-                    logger.info("Beginning parallel training for {} steps".format(self.training_steps))
+                    logger.info("Beginning parallel eval for {} steps".format(self.training_steps))
                     model.set_env(env)
 
-                    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    # Check victory 
+                    victory_prop, avg_reward = helper.check_victory(model, env, trials = n_eps)
 
+                    victories.append(victory_prop)
+                    avg_rewards.append(avg_reward)
+        
         # Otherwise we sample different opponents and we train against each of them separately
         else:
             for opponent in opponents:
@@ -261,17 +279,13 @@ class PNM():
                     env.set_panther_using_path(opponent)
                 else:
                     env.set_pelican_using_path(opponent)
-                logger.info("Beginning sequential training for {} steps".format(self.training_steps))
+                logger.info("Beginning sequential eval for {} steps".format(self.training_steps))
                 model.set_env(env)
-                #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                # Check victory 
+                victory_prop, avg_reward = helper.check_victory(model, env, trials = n_eps)
+                victories.append(victory_prop)
+                avg_rewards.append(avg_reward)
 
-        # Save agent
-        logger.info('Finished train agent')
-        savepath = self.basicdate + '_steps_' + str(previous_steps)
-        agent_filepath, _, _= helper.save_model_with_env_settings(exp_path, model, self.model_type, env, savepath)
-        agent_filepath = os.path.dirname(agent_filepath)
-        return # W percentage
+        return mean(victories)#, mean(avg_rewards)
             
                 
     def train_agent_against_mixture(self,
@@ -513,16 +527,9 @@ class PNM():
 
             # Train from skratch or retrain an existing model for pelican
             logger.info('Training pelican')
-            if np.random.rand(1) < self.retraining_prob:
-                path = np.random.choice(self.pelicans, 1, p = mixture_pelicans)[0]
-                path = glob.glob(path + "/*.zip")[0]
-                self.pelican_model = helper.loadAgent(path, self.model_type)
-            else:
-                self.pelican_model = helper.make_new_model(self.model_type,
-                                                           self.policy,
-                                                           self.pelican_env,
-                                                           n_steps=self.training_steps)
-
+            
+            self.pelican_model = bootstrap(self.pelicans, self.pelican_env, mixture_pelicans)
+                
             pelican_agent_filepath = self.train_agent_against_mixture('pelican',
                                                                       self.pelicans_tmp_exp_path,
                                                                       self.pelican_model,
@@ -531,18 +538,14 @@ class PNM():
                                                                       mixture_panthers,
                                                                       self.pelican_training_steps)
 
+            
+            
+            
             # Train from scratch or retrain an existing model for panther
             logger.info('Training panther')
-            if np.random.rand(1) < self.retraining_prob:
-                path = np.random.choice(self.panthers, 1, p = mixture_panthers)[0]
-                path = glob.glob(path + "/*.zip")[0]
-                self.panther_model = helper.loadAgent(path, self.model_type)
-            else:
-                self.panther_model = helper.make_new_model(self.model_type,
-                                                           self.policy,
-                                                           self.panther_env,
-                                                           n_steps=self.training_steps)
-
+            
+            self.panther_model = bootstrap(self.panthers, self.panther_env, mixture_panthers)
+            
             panther_agent_filepath = self.train_agent_against_mixture('panther',
                                                                      self.panthers_tmp_exp_path,
                                                                      self.panther_model,
