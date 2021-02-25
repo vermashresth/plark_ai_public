@@ -44,19 +44,18 @@ class PNM():
         self.training_steps             = kwargs.get('training_steps', 250) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
+        self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
+        self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
+        self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
         
         # Model training params:
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
         self.num_parallel_envs          = kwargs.get('num_parallel_envs', 7) # Used determine envs in VecEnv
         self.model_type                 = kwargs.get('model_type', 'PPO') # 'PPO' instead of 'PPO2' since we are using torch version
         self.policy                     = kwargs.get('policy', 'MlpPolicy') # Feature extractors
-        self.parallel                   = kwargs.get('parallel', True) # Keep it true while working with PPO
-        
+        self.parallel                   = kwargs.get('parallel', True) # Keep it true while working with PPO        
         self.initial_pelicans           = kwargs.get('initial_pelicans', []) # Specify paths to existing agents if available.
         self.initial_panthers           = kwargs.get('initial_panthers', []) # '' ''
-        self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
-        self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
-        self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
         sparse                          = kwargs.get('sparse', False) # Set to true for sparse rewards.
 
         # Game specific:
