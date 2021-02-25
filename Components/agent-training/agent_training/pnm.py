@@ -25,9 +25,6 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from stable_baselines3.common.vec_env import VecVideoRecorder
-
-
 class PNM():
 
     # Python constructor to initialise the players within the gamespace.
@@ -38,7 +35,7 @@ class PNM():
         # PARAMS
         # ######################################################################
 
-        self.training_steps             = kwargs.get('training_steps', 10) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 250) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
@@ -439,7 +436,8 @@ class PNM():
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
-            # if i == 0:
+            testing_interval = 5
+            # if i % testing_interval == 0:
             if True:
                 # occasionally ouput useful things along the way
                 # Make video
@@ -447,7 +445,7 @@ class PNM():
                 basewidth,hsize = helper.make_video_VEC_ENV(self.pelican_model, 
                                                             self.pelican_env, 
                                                             video_path,
-                                                            n_steps=100,
+                                                            n_steps=1000,
                                                             verbose=True)
 
         logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
@@ -455,9 +453,11 @@ class PNM():
         # Store DF for printing
         df_path = os.path.join(self.exp_path, "values.csv")
         df.to_csv(df_path, index = False)
+
+        # DOESN'T WORK WITH VEC ENVS
         # Make video
-        video_path =  os.path.join(self.exp_path, 'test_pnm.mp4')
-        basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
+        # video_path =  os.path.join(self.exp_path, 'test_pnm.mp4')
+        # basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
 
         # Saving final mixture and corresponding agents
         support_pelicans = np.nonzero(mixture_pelicans)[0]
