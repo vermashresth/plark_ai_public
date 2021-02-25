@@ -1,3 +1,5 @@
+#THIS CLASS IS DEFUNCT - I AM ONLY KEEPING IT AROUND IN CASE WE HAVE TO GO BACK TO 
+#TENSORFLOW
 from plark_game.classes.pantherAgent import *
 import tensorflow as tf
 import numpy as np

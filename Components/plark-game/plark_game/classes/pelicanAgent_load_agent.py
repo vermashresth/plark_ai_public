@@ -61,6 +61,7 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
                 'Error loading pelican agent. File : "' + filepath + '" does not exsist'
             )
 
+
     def getAction(self, state):
         # Eventually this should be replaced by a helper method that doesn't require constructing a class instance
         if not self.pil_ui:
@@ -76,6 +77,18 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
                 state["torpedo_speeds"],
             )
 
+	if self.imaged_based:
+	    obs = self.pil_ui.update(state)
+	    obs = np.array(obs, dtype=np.uint8)
+	else:
+	    obs = self.observation.get_observation(state)
+	    #print("Pelican (opponent) obs:")
+	    #print(obs)
+
+	action, _ = self.model.predict(obs, deterministic=False)
+	return self.action_lookup(action)
+
+
         if self.imaged_based:
             obs = self.pil_ui.update(state)
             obs = np.array(obs, dtype=np.uint8)
@@ -85,12 +98,13 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
         action, _ = self.model.predict(obs, deterministic=False)
         return self.action_lookup(action)
 
-        def getTournamentAction(self, obs, obs_normalised, domain_parameters, state):
-            """
-            PARTICIPANTS:  the example below calls model.predict on a stable_baselines
-            agent that expects the observation (a list of numbers).
-            Modify this if you have an agent that expects a different input, for
-            example obs_normalised, or state, or if it needs the domain_parameters.
-            """
-            action, _ = self.model.predict(obs, deterministic=False)
-            return self.action_lookup(action)
+
+    def getTournamentAction(self, obs, obs_normalised, domain_parameters, state):
+        """
+        PARTICIPANTS:  the example below calls model.predict on a stable_baselines
+        agent that expects the observation (a list of numbers).
+        Modify this if you have an agent that expects a different input, for
+        example obs_normalised, or state, or if it needs the domain_parameters.
+        """
+        action, _ = self.model.predict(obs, deterministic=False)
+        return self.action_lookup(action)

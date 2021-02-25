@@ -9,22 +9,22 @@ import jsonpickle
 
 class Panther_Agent_Random_Walk(Panther_Agent):
 
-	def __init__(self):
-		pass
+        def __init__(self):
+                pass
 
-	def getAction(self, state):
-		map_width = state['map_width']
-		panther_col = state['panther_col']
-		actions = [0]
-		if panther_col != 0: #If it is not on the left add move left action
-			actions.append(5)
-		if panther_col < map_width: #If it is not on the right add move right action
-			actions.append(1)
+        def getAction(self, state):
+                map_width = state['map_width']
+                panther_col = state['panther_col']
+                actions = [0]
+                if panther_col != 0: #If it is not on the left add move left action
+                        actions.append(5)
+                if panther_col < map_width: #If it is not on the right add move right action
+                        actions.append(1)
 
-		seed()
-		actionValue =  actions[randint(0, len(actions)-1)]
+                seed()
+                actionValue =  actions[randint(0, len(actions)-1)]
 
-		return self.action_lookup(actionValue) 
+                return self.action_lookup(actionValue) 
 
 
 
@@ -35,5 +35,5 @@ class Panther_Agent_Random_Walk(Panther_Agent):
 #     3 : '4',  # Down
 #     4 : '5',  # Down left
 #     5 : '6',  # Up left
-# 	6 : 'end'
+#       6 : 'end'
 # }
