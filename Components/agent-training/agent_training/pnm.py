@@ -36,6 +36,7 @@ class PNM():
         # ######################################################################
 
         self.training_steps             = kwargs.get('training_steps', 250) # N training steps per PNM iteration for each agent
+        self.video_steps                = kwargs.get('video_steps', 1000) # N steps used to create videos
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
@@ -440,13 +441,21 @@ class PNM():
             # if i % testing_interval == 0:
             if True:
                 # occasionally ouput useful things along the way
-                # Make video
-                video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%02d.mp4' % i)
+                # Make videos
+                verbose = False
+                video_path =  os.path.join(self.exp_path, 'pelican_pnm_iter_%02d.mp4' % i)
                 basewidth,hsize = helper.make_video_VEC_ENV(self.pelican_model, 
                                                             self.pelican_env, 
                                                             video_path,
-                                                            n_steps=1000,
-                                                            verbose=True)
+                                                            n_steps=self.video_steps,
+                                                            verbose=verbose)
+                video_path =  os.path.join(self.exp_path, 'panther_pnm_iter_%02d.mp4' % i)
+                basewidth,hsize = helper.make_video_VEC_ENV(self.panther_model, 
+                                                            self.panther_env, 
+                                                            video_path,
+                                                            n_steps=self.video_steps,
+                                                            verbose=verbose)
+
 
         logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
         logger.info('Training panther total steps: ' + str(self.panther_training_steps))
