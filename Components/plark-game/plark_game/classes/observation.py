@@ -7,7 +7,9 @@ logger = logging.getLogger(__name__)
 
 class Observation():
 
-        def __init__(self,game,**kwargs):
+        #I have made game config a compulsory argument here so that I can flag anywhere in 
+        #the code where it is not passed - despite that fact that one might not use it
+        def __init__(self, game, **kwargs):
                 self.game = game
                 self.kwargs = kwargs
                 if self.kwargs.get('driving_agent'):
@@ -15,6 +17,11 @@ class Observation():
                 else:
                         self.driving_agent = 'pelican'
                         self.kwargs['driving_agent'] = self.driving_agent
+
+                #A boolean flag to indicate whether to add the domain parameters to the
+                #observation space
+                self.domain_params_in_obs = kwargs.get('domain_params_in_obs', False)
+                print("Domain params bool:", self.domain_params_in_obs)
 
                 self.max_grid_width = 30
                 self.max_grid_height = 30
@@ -36,6 +43,8 @@ class Observation():
                 #self.max_torpedoes = 5
                 #self.max_torpedo_turns = 3
                 #self.max_torpedo_speed = 4
+                self.max_torp_search_range = 4
+                self.max_sonobuoy_active_range = 4
 
                 #These arguments don't even seem to be passed - kwargs doesn't contain
                 #any of these
@@ -206,6 +215,27 @@ class Observation():
                                 obs_shape.append(self.max_grid_width+1)
                                 obs_label.append('torp y')
 
+                #Add max domain params if flag is true
+                if self.domain_params_in_obs:
+                    #Map width, map height, active range are already given so leave them out
+                    obs_shape.append(self.max_sonobuoys) 
+                    obs_label.append('max_sonobuoys')
+                    obs_shape.append(self.max_turns) 
+                    obs_label.append('max_turns')
+                    obs_shape.append(self.max_pelican_moves) 
+                    obs_label.append('max_pelican_moves')
+                    obs_shape.append(self.max_panther_moves) 
+                    obs_label.append('max_panther_moves')
+                    obs_shape.append(self.max_torpedoes) 
+                    obs_label.append('max_torpedoes')
+                    obs_shape.append(self.max_torpedo_turns) 
+                    obs_label.append('max_torpedo_turns')
+                    for i in range(self.max_torpedo_turns):
+                        obs_shape.append(self.max_torpedo_speed)
+                        obs_label.append('max_torpedo_speed_'+str(i))
+                    obs_shape.append(self.max_torp_search_range) 
+                    obs_label.append('max_torp_search_range')
+
                 obs_shape_new = []
                 for i in obs_shape:
                         obs_shape_new.append(i+1)
@@ -215,6 +245,10 @@ class Observation():
                 # logger.info("Observation space: MultiDiscrete: {}".format(obs_shape))
                 # logger.info("Observation space: MultiDiscrete: {}".format(obs_label)) 
                 self.obs_label = obs_label
+
+                #I don't think self.obs_label is used? When you uncomment below,
+                #nothing happens
+                #self.obs_label = None
 
         def get_observation_space(self):
                 return self.observation_space
@@ -389,13 +423,46 @@ class Observation():
                                         obs_label_from_state.append('torp x')
                                         obs_label_from_state.append('torp y')
 
+                #If flag is true, add domain params to the observation space
+                #Max width, max height and active range are already added above
+                if self.domain_params_in_obs:
+                    obs.append(self.game.pelican_parameters['default_sonobuoys'])
+                    obs_label_from_state.append('max_sonobuoys')
+                    obs.append(self.game.maxTurns)
+                    obs_label_from_state.append('max_turns')
+                    obs.append(self.game.pelican_parameters['move_limit']) 
+                    obs_label_from_state.append('max_pelican_moves')
+                    obs.append(self.game.panther_parameters['move_limit']) 
+                    obs_label_from_state.append('max_panther_moves')
+                    obs.append(self.game.pelican_parameters['default_torps']) 
+                    obs_label_from_state.append('max_torpedoes')
+                    obs.append(self.game.torpedo_parameters['turn_limit']) 
+                    obs_label_from_state.append('max_torpedo_turns')
+                    #Default value for torpedo speed is 0 if there are not maximum
+                    #torpedo turns
+                    torp_speeds = [0] * self.max_torpedo_turns
+                    for i in range(len(torp_speeds)):
+                        if i < len(self.game.torpedo_parameters['speed']):
+                            torp_speeds[i] = self.game.torpedo_parameters['speed'][i]
+                        obs_label_from_state.append('torpedo_speed_'+str(i))
+                    obs += torp_speeds
+                    obs.append(self.game.torpedo_parameters['search_range']) 
+                    obs_label_from_state.append('max_torp_search_range')
+
                 #logger.info("Observation: {}".format(obs))
                 #logger.info("Observation space size: {}".format(len(obs)))
-                # logger.info("Observation labels: {}".format(obs_label_from_state))
+                #logger.info("Observation labels: {}".format(obs_label_from_state))
+                #logger.info("Observation labels size: {}".format(len(obs_label_from_state)))
+
+                #I don't think obs_label_from_state is used - commenting out below 
+                #does not have an effect
+                #In fact, it is not even returned from this function nor set as a 
+                #member variable? Unless it is being used because Python can access
+                #variables outside the scope that it is declared in :/
+                #obs_label_from_state = None
+
                 if self.kwargs.get('normalise', False):
                     obs_maxs = np.array(self.observation_max_for_normalisation) - 1
-                    #print(self.driving_agent)
-                    #print(np.divide(np.array(obs), obs_maxs))
                     return np.divide(np.array(obs), obs_maxs)
                 else:
                     return obs
