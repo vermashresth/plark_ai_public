@@ -38,7 +38,7 @@ class PNM():
         # PARAMS
         # ######################################################################
 
-        self.training_steps             = kwargs.get('training_steps', 250) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 10) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
@@ -106,10 +106,6 @@ class PNM():
                                            vecenv = self.parallel,
                                            normalise = normalise)
 
-        # TESTING VEC VIDEO RECORDER
-        self.pelican_env = VecVideoRecorder(self.pelican_env, 
-                                            self.exp_path, 
-                                            record_video_trigger=lambda x: x == 0)
 
     def compute_initial_payoffs(self):
         # If I appended multiple entries all together
@@ -442,12 +438,19 @@ class PNM():
                                                                      self.panther_training_steps)
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
-
-            # occasionally ouput useful things along the way
-            # if i == 2:
-                # # Make video
-                # video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%d.mp4' % i)
-                # basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
+            
+                        # if i == 0:
+            if True:
+                # occasionally ouput useful things along the way
+                # Make video
+                video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%02d.mp4' % i)
+                basewidth,hsize = helper.make_video_VEC_ENV(self.pelican_model, 
+                                                            self.pelican_env, 
+                                                            video_path,
+                                                            fps=1,
+                                                            basewidth=2048,
+                                                            n_steps=100,
+                                                            verbose=True)
 
         logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
         logger.info('Training panther total steps: ' + str(self.panther_training_steps))
@@ -480,8 +483,6 @@ class PNM():
                                                                       self.panther_env,
                                                                       self.basicdate + "_ps_" + str(i))
         return video_path, basewidth, hsize
-
-
 
 if __name__ == '__main__':
 

@@ -32,7 +32,7 @@ class Newgame():
                 self.trained_agents_filepath = '/data/models/'
                 self.relative_basic_agents_filepath = '../agents/basic'
                 self.import_agents()
-
+                self.is_in_vec_env = kwargs.get('is_in_vec_env', False) 
                 # load the game configurations
                 self.load_configurations(game_config, **kwargs)
 
@@ -420,7 +420,10 @@ class Newgame():
                 return state
 
         def render(self, render_width,render_height,view):
-                return self.pil_ui.update(self._state(view),render_width,render_height)
+            if self.is_in_vec_env:
+                    return np.array(self.pil_ui.update(self._state(view),render_width,render_height))
+            else:
+                    return self.pil_ui.update(self._state(view),render_width,render_height)
 
         def set_pelican_Payload(self):
                 for i in range(self.pelican_parameters['default_torps']):
