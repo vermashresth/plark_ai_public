@@ -25,6 +25,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from stable_baselines3.common.vec_env import VecVideoRecorder
+
 
 class PNM():
 
@@ -103,6 +105,11 @@ class PNM():
                                            sparse = sparse,
                                            vecenv = self.parallel,
                                            normalise = normalise)
+
+        # TESTING VEC VIDEO RECORDER
+        self.pelican_env = VecVideoRecorder(self.pelican_env, 
+                                            self.exp_path, 
+                                            record_video_trigger=lambda x: x == 0)
 
     def compute_initial_payoffs(self):
         # If I appended multiple entries all together
@@ -437,10 +444,10 @@ class PNM():
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
             # occasionally ouput useful things along the way
-            if i == 2:
-                # Make video
-                video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%d.mp4' % i)
-                basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
+            # if i == 2:
+                # # Make video
+                # video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%d.mp4' % i)
+                # basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
 
 
         logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
@@ -476,7 +483,9 @@ class PNM():
         return video_path, basewidth, hsize
 
 
-def main():
+
+if __name__ == '__main__':
+
     #examples_dir = '/data/examples'
     # Initial sets of opponents is automatically loaded from dir
     #pelicans_start_opponents = [p.path for p in os.scandir(examples_dir + '/pelicans') if p.is_dir()]
@@ -490,6 +499,4 @@ def main():
               initial_panthers = panthers_start_opponents)
 
     pnm.run_pnm()
-
-if __name__ == '__main__':
     main()
