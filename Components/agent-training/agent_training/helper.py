@@ -478,6 +478,41 @@ def load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, pa
 
     return video_file, game.gameState ,video_file_path
 
+def make_video_VEC_ENV(model,env,video_file_path,n_steps = 10000,fps=10,deterministic=False,basewidth = 512,verbose =False):
+    # Test the trained agent
+    # This is when you have a stable baselines model and an gym env
+    obs = env.reset()
+    writer = imageio.get_writer(video_file_path, fps=fps) 
+    hsize = None
+    for step in range(n_steps):
+        image = env.render(mode='rgb_array')
+        # TODO: use get_images directly somehow with the 
+        # imgs = [np.array(i) for i in imgs]
+        try:
+            print(image.shape)
+            image = PIL.Image.fromarray(image)
+        except:
+            print("NOT WORKED TO CONVERT BACK TO PIL")
+
+        # image = env.render(view='ALL')
+        action, _ = model.predict(obs, deterministic=deterministic)
+    
+        obs, reward, done, info = env.step(action)
+        if verbose:
+            logger.info("Step: "+str(step)+" Action: "+str(action)+' Reward:'+str(reward)+' Done:'+str(done))
+
+        if hsize is None:
+            wpercent = (basewidth/float(image.size[0]))
+            hsize = int((float(image.size[1])*float(wpercent)))
+        res_image = image.resize((basewidth,hsize), PIL.Image.ANTIALIAS)
+        writer.append_data(np.copy(np.array(res_image)))
+        if all(done):
+            if verbose:
+                logger.info("Goal reached:, reward="+ str(reward))
+            # break
+    writer.close()  
+    return basewidth,hsize      
+
 
 def make_video(model,env,video_file_path,n_steps = 10000,fps=10,deterministic=False,basewidth = 512,verbose =False):
     # Test the trained agent
