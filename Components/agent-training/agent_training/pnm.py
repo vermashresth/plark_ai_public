@@ -205,7 +205,7 @@ class PNM():
                                                                    opponent_mixture,
                                                                    self.payoff_matrix_trials)) 
         
-        return filepaths[np.argmin(win_percentages)], max(win_percentages)
+        return filepaths, win_percentages
             
 
     def bootstrap(self, model_paths, env, mixture):
