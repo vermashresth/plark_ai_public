@@ -16,11 +16,12 @@ def save_video(genome, agent, env, num_steps, file_name='evo_run.mp4'):
     video_path = '/' + file_name
     helper.make_video_plark_env(agent, env, video_path, n_steps=num_steps)
 
-def evaluate(genome, config_file_path, driving_agent, normalise):
+def evaluate(genome, config_file_path, driving_agent, normalise_obs, domain_params_in_obs):
 
     #Instantiate the env
     env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
-                         driving_agent=driving_agent, normalise=normalise)
+                         driving_agent=driving_agent, normalise=normalise_obs,
+                         domain_params_in_obs=domain_params_in_obs)
 
     num_inputs = len(env._observation())
     num_hidden_layers = 0
@@ -47,14 +48,14 @@ def evaluate(genome, config_file_path, driving_agent, normalise):
         if done:
             break
 
-    #agent.save_agent(obs_normalise=normalise)
+    agent.save_agent(obs_normalise=normalise)
 
     #print("Finished at step num:", step_num)
     #print("Reward:", reward)
     #print("Status:", info['status'])
 
     #save_video(genome, agent, env, max_num_steps, file_name='evo.mp4')
-    #exit()
+    exit()
 
     return [reward]
 
@@ -65,12 +66,14 @@ if __name__ == '__main__':
     #trained_agent = 'panther'
     trained_agent = 'pelican'
     normalise_obs = True
+    domain_params_in_obs = True
 
     #Instantiate dummy env and dummy agent
     #I need to do this to ascertain the number of weights needed in the optimisation
     #procedure
     dummy_env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
-                               driving_agent=trained_agent, normalise=normalise_obs)
+                               driving_agent=trained_agent, normalise=normalise_obs,
+                               domain_params_in_obs=domain_params_in_obs)
 
     #Neural net variables
     num_inputs = len(dummy_env._observation())
@@ -85,13 +88,14 @@ if __name__ == '__main__':
                                 neurons_per_hidden_layer=neurons_per_hidden_layer)  
 
     num_weights = dummy_agent.get_num_weights()
-    
+
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMax)
 
     toolbox = base.Toolbox()
     toolbox.register("evaluate", evaluate, config_file_path=config_file_path, 
-                     driving_agent=trained_agent, normalise=normalise_obs)
+                     driving_agent=trained_agent, normalise_obs=normalise_obs,
+                     domain_params_in_obs=domain_params_in_obs)
 
     #np.random.seed(108)
 
@@ -121,7 +125,7 @@ if __name__ == '__main__':
     stats.register("min", np.min)
     stats.register("max", np.max)
 
-    num_gens = 200
+    num_gens = 1
     population, logbook = algorithms.eaGenerateUpdate(toolbox, ngen=num_gens, 
                                                       stats=stats, halloffame=hof)
 

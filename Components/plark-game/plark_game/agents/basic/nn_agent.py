@@ -27,7 +27,6 @@ class NNAgent(Agent):
         if file_dir_name is not None:
             metadata, genotype = self._read_agent_from_file(file_dir_name) 
 
-            #TODO: Set values
             self.num_inputs = metadata['num_inputs']
             self.num_hidden_layers = metadata['num_hidden_layers']
             self.neurons_per_hidden_layer = metadata['neurons_per_hidden_layer']

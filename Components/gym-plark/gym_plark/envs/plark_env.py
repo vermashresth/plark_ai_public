@@ -112,7 +112,7 @@ class PlarkEnv(gym.Env):
                                 else:
                                         self.env.createNewGame(**self.kwargs)
                         self.game = self.env.activeGames[len(self.env.activeGames)-1]           
-                        self.observation = classes.Observation(self.game,**kwargs)
+                        self.observation = classes.Observation(self.game, **kwargs)
                         self.observation_space = self.observation.get_observation_space() 
                         #logger.info('Non image observations created')
 
