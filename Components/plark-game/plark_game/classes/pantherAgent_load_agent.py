@@ -13,19 +13,19 @@ logger = logging.getLogger(__name__)
 
 class Panther_Agent_Load_Agent(Panther_Agent):
 
-	def __init__(self, filepath, algorithm_type, observation = None, imaged_based=True):
+	def __init__(self, filepath, algorithm_type): #, observation = None, imaged_based=True):
 
 		# Can't initialise this until we have game state
 		self.pil_ui = None
-		self.imaged_based = imaged_based
-		
-		if not self.imaged_based: 
-			if observation is not None:
-				self.observation = observation
-			else:
-				raise ValueError('Observation object not passed in to load agent.' )
-		
-		if os.path.exists(filepath): 
+#		self.imaged_based = imaged_based
+#
+#		if not self.imaged_based:
+#			if observation is not None:
+#				self.observation = observation
+#			else:
+#				raise ValueError('Observation object not passed in to load agent.' )
+
+		if os.path.exists(filepath):
 			self.loadAgent(filepath , algorithm_type)
 			logger.info('panther agent loaded')
 		else:
@@ -46,28 +46,27 @@ class Panther_Agent_Load_Agent(Panther_Agent):
 		except:
 			raise ValueError('Error loading panther agent. File : "' + filepath + '" does not exsist' )
 
-		
-	def getAction(self, state):
+
+	def getAction(self, obs): #state):
 		# This should be replaced by a helper method that doesn't require constructing a class instance
-		if not self.pil_ui:
-			self.pil_ui = PIL_UI(
-				state,
-				state['hexScale'],
-				state['view_all'],
-				state['sb_display_range'],
-				state['render_width'],
-				state['render_height'],
-				state['sb_range'],
-				state['torpedo_hunt_enabled'],
-				state['torpedo_speeds']
-			)
-
-		if self.imaged_based:
-			obs = self.pil_ui.update(state)
-			obs = np.array(obs, dtype=np.uint8)
-		else:
-			obs = self.observation.get_observation(state) 
-
+#		if not self.pil_ui:
+#			self.pil_ui = PIL_UI(
+#				state,
+#				state['hexScale'],
+#				state['view_all'],
+#				state['sb_display_range'],
+#				state['render_width'],
+#				state['render_height'],
+#				state['sb_range'],
+#				state['torpedo_hunt_enabled'],
+#				state['torpedo_speeds']
+#			)
+#
+#		if self.imaged_based:
+#			obs = self.pil_ui.update(state)
+#			obs = np.array(obs, dtype=np.uint8)
+#		else:
+#			obs = self.observation.get_observation(state)
+#
 		action, _ = self.model.predict(obs, deterministic=False)
 		return self.action_lookup(action)
-

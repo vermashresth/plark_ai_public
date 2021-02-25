@@ -22,7 +22,8 @@ from schema import deserialize_state
 # Agent can be either a .zip file and metadata json file, or a .py file.
 
 AGENTS_PATH = os.path.join(
-    "/plark_ai_public", "data", "agents", "models", "latest"
+#    "/plark_ai_public", "data", "agents", "models", "latest"
+    "/Users/nbarlow/plark_ai_public", "data", "greg_test"
 )
 
 ##########################################################
