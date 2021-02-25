@@ -25,9 +25,6 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from stable_baselines3.common.vec_env import VecVideoRecorder
-
-
 class PNM():
 
     # Python constructor to initialise the players within the gamespace.
@@ -38,24 +35,37 @@ class PNM():
         # PARAMS
         # ######################################################################
 
-        self.training_steps             = kwargs.get('training_steps', 10) # N training steps per PNM iteration for each agent
+        # Path related args
+        config_file_path                = kwargs.get('config_file_path', '/Components/plark-game/plark_game/game_config/10x10/balanced.json')
+        self.basicdate                  = kwargs.get('basicdate', str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
+        basepath                        = kwargs.get('basepath', '/data/agents/models')
+        
+        # Training, evaluation steps, opponents, etc:
+        self.training_steps             = kwargs.get('training_steps', 250) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
-        self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
-        normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
+        
+        # Model training params:
+        normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
         self.num_parallel_envs          = kwargs.get('num_parallel_envs', 7) # Used determine envs in VecEnv
         self.model_type                 = kwargs.get('model_type', 'PPO') # 'PPO' instead of 'PPO2' since we are using torch version
         self.policy                     = kwargs.get('policy', 'MlpPolicy') # Feature extractors
         self.parallel                   = kwargs.get('parallel', True) # Keep it true while working with PPO
-        config_file_path                = kwargs.get('config_file_path', '/Components/plark-game/plark_game/game_config/10x10/balanced.json')
-        self.basicdate                  = kwargs.get('basicdate', str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
-        basepath                        = kwargs.get('basepath', '/data/agents/models')
+        
         self.initial_pelicans           = kwargs.get('initial_pelicans', []) # Specify paths to existing agents if available.
         self.initial_panthers           = kwargs.get('initial_panthers', []) # '' ''
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
         sparse                          = kwargs.get('sparse', False) # Set to true for sparse rewards.
+
+        # Game specific:
+        self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
+                
+        # Video Args:
+        self.video_steps                = kwargs.get('video_steps', 1000) # N steps used to create videos        
+        self.basewidth                  = kwargs.get('basewidth', 2048) # Increase/decrease for high/low resolution videos.
+        self.fps                        = kwargs.get('fps', 2) # Videos with lower values are easier to interpret.
 
         # Path to experiment folder
         exp_name = 'test_' + self.basicdate
@@ -438,28 +448,42 @@ class PNM():
                                                                      self.panther_training_steps)
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
-            
-                        # if i == 0:
+
+            testing_interval = 5
+            # if i % testing_interval == 0:
             if True:
                 # occasionally ouput useful things along the way
-                # Make video
-                video_path =  os.path.join(self.exp_path, 'test_pnm_iter_%02d.mp4' % i)
+                # Make videos
+                verbose = False
+                video_path =  os.path.join(self.exp_path, 'pelican_pnm_iter_%02d.mp4' % i)
                 basewidth,hsize = helper.make_video_VEC_ENV(self.pelican_model, 
                                                             self.pelican_env, 
                                                             video_path,
-                                                            fps=1,
-                                                            basewidth=2048,
-                                                            n_steps=100,
-                                                            verbose=True)
+                                                            fps=self.fps,
+                                                            basewidth=self.basewidth,
+                                                            n_steps=self.video_steps,
+                                                            verbose=verbose)
+                                                            
+                video_path =  os.path.join(self.exp_path, 'panther_pnm_iter_%02d.mp4' % i)
+                basewidth,hsize = helper.make_video_VEC_ENV(self.panther_model, 
+                                                            self.panther_env, 
+                                                            video_path,
+                                                            fps=self.fps,
+                                                            basewidth=self.basewidth,
+                                                            n_steps=self.video_steps,
+                                                            verbose=verbose)
+
 
         logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
         logger.info('Training panther total steps: ' + str(self.panther_training_steps))
         # Store DF for printing
         df_path = os.path.join(self.exp_path, "values.csv")
         df.to_csv(df_path, index = False)
+
+        # DOESN'T WORK WITH VEC ENVS
         # Make video
-        video_path =  os.path.join(self.exp_path, 'test_pnm.mp4')
-        basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
+        # video_path =  os.path.join(self.exp_path, 'test_pnm.mp4')
+        # basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
 
         # Saving final mixture and corresponding agents
         support_pelicans = np.nonzero(mixture_pelicans)[0]
