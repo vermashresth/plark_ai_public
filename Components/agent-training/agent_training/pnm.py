@@ -48,7 +48,8 @@ class PNM():
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
 
-        self.exploit_steps              = kwargs.get('exploit_steps', 0.001) # Steps for testing exploitabilty
+        self.exploit_steps              = kwargs.get('exploit_steps', 500) # Steps for testing exploitabilty
+        self.exploit_trials             = kwargs.get('exploit_trials', 100) # N eval steps for RBBR in exploit step
         
         # Model training params:
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
@@ -203,7 +204,7 @@ class PNM():
                                                                     env,
                                                                     opponent_policy_fpaths,
                                                                     opponent_mixture,
-                                                                    self.payoff_matrix_trials))
+                                                                    self.exploit_trials))
 
         return filepaths, win_percentages
             
@@ -572,7 +573,7 @@ class PNM():
                                                 mixture_panthers) # opponent_mixture)
 
                 logger.info("################################################")
-                logger.info('candidate_pelican_rbbr_win_percentages: %s' %  candidate_pelican_rbbr_win_percentages)
+                logger.info('candidate_pelican_rbbr_win_percentages: %s' %  np.round(candidate_pelican_rbbr_win_percentages,2))
                 logger.info("################################################")
 
                 candidate_panther_rbbr_fpaths, candidate_panther_rbbr_win_percentages = self.iter_train_against_mixture(
@@ -586,7 +587,7 @@ class PNM():
                                                 mixture_pelicans) # opponent_mixture)
 
                 logger.info("################################################")
-                logger.info('candidate_panther_rbbr_win_percentages: %s' % candidate_panther_rbbr_win_percentages)
+                logger.info('candidate_panther_rbbr_win_percentages: %s' % np.round(candidate_panther_rbbr_win_percentages,2))
                 logger.info("################################################")
 
                 # occasionally ouput useful things along the way
