@@ -438,14 +438,14 @@ class PNM():
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
-        logger.info('Training pelican total steps: ' + str(pelican_training_steps))
-        logger.info('Training panther total steps: ' + str(panther_training_steps))
+        logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
+        logger.info('Training panther total steps: ' + str(self.panther_training_steps))
         # Store DF for printing
         df_path = os.path.join(self.exp_path, "values.csv")
         df.to_csv(df_path, index = False)
         # Make video
         video_path =  os.path.join(self.exp_path, 'test_pnm.mp4')
-        basewidth,hsize = helper.make_video(self.pelican_model, pelican_env, video_path)
+        basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
 
         # Saving final mixture and corresponding agents
         support_pelicans = np.nonzero(mixture_pelicans)[0]
