@@ -42,11 +42,11 @@ class Newgame():
                 # Load agents
                 relative_basic_agents_filepath = os.path.join(os.path.dirname(__file__), self.relative_basic_agents_filepath)
                 relative_basic_agents_filepath = os.path.normpath(relative_basic_agents_filepath)
-                
+
                 if self.driving_agent == 'panther':
                         if not self.output_view_all:
                                 self.gamePlayerTurn = "PANTHER"
-                
+
                         self.pelicanAgent = load_agent(self.pelican_parameters['agent_filepath'], self.pelican_parameters['agent_name'],relative_basic_agents_filepath,self)
 
                 else:
@@ -175,12 +175,12 @@ class Newgame():
                 if self.escape_rule:
                         if self.pantherPlayer.row == 0:
 
-                                if self.pantherPlayer.col % 2 == 0: 
+                                if self.pantherPlayer.col % 2 == 0:
                                         # If even row
                                         if panther_action in ['0', '1', '5']: # left up , up ,right up
                                                 self.gameState = "ESCAPE"
                                                 return
-                                elif self.pantherPlayer.col % 2 != 0: 
+                                elif self.pantherPlayer.col % 2 != 0:
                                         # If odd row
                                         if panther_action == '1': #  Up
                                                 self.gameState = "ESCAPE"
@@ -211,7 +211,7 @@ class Newgame():
                         #logger.warning("Too many illegal moves ({}). Ending pelican turn...".format(self.pelican_illegal_move_streak))
                         self.pelican_move_in_turn = self.pelican_parameters['move_limit']
 
-                
+
         def perform_pelican_action(self, pelican_action):
                 if pelican_action in ['1', '2', '3', '4', '5', '6']:
                         new_col, new_row = self.gameBoard.getNeighbours(int(pelican_action), self.pelicanPlayer.col, self.pelicanPlayer.row)
@@ -229,12 +229,12 @@ class Newgame():
 
                         # check if sonobuoy is in payload
                         if (list(filter(lambda item: (item.type == 'SONOBUOY'), self.pelicanPlayer.payload))):
-        
+
                                 # check if current hex already contains a sonobuoy
                                 if self.gameBoard.is_item_type_in_cell('SONOBUOY', self.pelicanPlayer.col, self.pelicanPlayer.row):
                                         self._illegal_pelican_move('Duplicate sonobuoy')
                                 else:
-                                        # deploy sonobuoy 
+                                        # deploy sonobuoy
                                         sb = Sonobuoy(self.sonobuoy_parameters['active_range'])
                                         sb.setLocation(self.pelicanPlayer.col, self.pelicanPlayer.row)
                                         sb.setState("COLD")
@@ -260,7 +260,7 @@ class Newgame():
                                         self.globalTorps.append(t)
                                         self.pelicanPlayer.removeTorpFromPayload()
                         else:
-                                self._illegal_pelican_move('No torpedo remaining')              
+                                self._illegal_pelican_move('No torpedo remaining')
 
 
         def madmanPhase(self, pelicanMoves):
@@ -362,7 +362,7 @@ class Newgame():
                                 total_torpedoes = undeployed_torpedoes + deployed_torpedoes
                                 if total_torpedoes == 0:
                                         self.gameState = "WINCHESTER"
-                                
+
         def update_status_bar(self, message, colour):
                 self.status_bar = {
                         'message': message,
@@ -404,17 +404,17 @@ class Newgame():
                         state['pelican_max_moves'] = self.pelican_parameters['move_limit']
                         state['pelican_move_in_turn'] = self.pelican_move_in_turn
                         state['madman'] = self.pelicanPlayer.madmanStatus
-                        state['pelican_col'] = self.pelicanPlayer.col 
+                        state['pelican_col'] = self.pelicanPlayer.col
                         state['pelican_row'] = self.pelicanPlayer.row
                         state['remaining_sonobuoys'] = len([obj for obj in self.pelicanPlayer.payload if obj.type == "SONOBUOY"])
                         state['deployed_sonobuoys'] = self.globalSonobuoys
                         state['remaining_torpedoes'] = len([obj for obj in self.pelicanPlayer.payload if obj.type == "TORPEDO"])
                         state['deployed_torpedoes'] = self.globalTorps
-                        
+
                 if view in ['PANTHER', 'ALL'] or self.driving_agent == 'panther':
                         state['panther_max_moves'] = self.panther_parameters['move_limit']
                         state['panther_move_in_turn'] = self.panther_move_in_turn
-                        state['panther_col'] = self.pantherPlayer.col 
+                        state['panther_col'] = self.pantherPlayer.col
                         state['panther_row'] = self.pantherPlayer.row
 
                 return state
@@ -444,7 +444,7 @@ class Newgame():
                 # Render settings
                 self.hexScale = kwargs.get('hex_scale', game_config['render_settings']['hex_scale'])
                 self.output_view_all = kwargs.get('output_view_all', game_config['render_settings']['output_view_all'])
-                
+
                 # this is used to override the driving agent when rendering the display
                 if self.output_view_all:
                         self.gamePlayerTurn = "ALL"
@@ -494,7 +494,7 @@ class Newgame():
                         "render_height" :kwargs.get('panther_render_height', game_config['game_rules']['panther']['render_height']),
                         "render_width" :kwargs.get('panther_render_width', game_config['game_rules']['panther']['render_width'])
                 }
-        
+
         def import_agents(self):
                 #This loads the agents from a default relative_basic_agents_filepath path which is inside the pip module.
                 relative_basic_agents_filepath = os.path.join(os.path.dirname(__file__), self.relative_basic_agents_filepath)
@@ -508,14 +508,14 @@ class Newgame():
                                 try:
                                         #logger.info('Opening agent from:'+relative_basic_agents_filepath+'/'+str(agent))
                                         module = __import__(agent[:-3])
-        
+
                                 except ImportError as err:
                                         raise ValueError("Couldn't import", agent, ' - ', err )
                                         continue
                                 finally:    # always restore the real path
                                         sys.path[:] = oldpath
 
-        
+
         def create_game_objects(self):
                 self.gameBoard = Map(self.map_width, self.map_height)
                 self.pantherPlayer = Panther()
@@ -526,7 +526,7 @@ class Newgame():
                 self.pelicanPlayer = Pelican()
                 self.pelicanMove = Move()  # reset for new turn
                 self.set_pelican_Payload()
-                
+
                 self.pelicanPlayer.setLocation(self.pelican_start_col, self.pelican_start_row)
 
                 self.gameBoard.addItem(self.pantherPlayer.col, self.pantherPlayer.row, self.pantherPlayer)
@@ -558,9 +558,9 @@ class Newgame():
             agent_filepath = glob.glob(file_path+"/*.zip")[0]
             with open(metadata_filepath) as f:
                 metadata = json.load(f)
-            #logger.info('Playing against:'+agent_filepath)  
+            #logger.info('Playing against:'+agent_filepath)
             kwargs = {}
-            kwargs['driving_agent'] = metadata['agentplayer'] 
+            kwargs['driving_agent'] = metadata['agentplayer']
             if image_based == False:
                 observation = Observation(self,**kwargs)
             self.pelicanAgent = Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
@@ -570,7 +570,7 @@ class Newgame():
             agent_filepath = glob.glob(file_path+"/*.zip")[0]
             with open(metadata_filepath) as f:
                 metadata = json.load(f)
-            #logger.info('Playing against:'+agent_filepath)  
+            #logger.info('Playing against:'+agent_filepath)
             kwargs = {}
             kwargs['driving_agent'] = metadata['agentplayer']
             if image_based == False:
@@ -578,7 +578,7 @@ class Newgame():
             self.pantherAgent = Panther_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
 
 def load_agent(file_path, agent_name,basic_agents_filepath,game,**kwargs):
-        if '.py' in file_path: # This is the case for an agent in a non standard location or selected throguh web ui. 
+        if '.py' in file_path: # This is the case for an agent in a non standard location or selected throguh web ui.
                         # load python
                         file_path = os.path.join(basic_agents_filepath, file_path)
                         oldpath, sys.path[:] = sys.path[:], [basic_agents_filepath]
@@ -590,7 +590,7 @@ def load_agent(file_path, agent_name,basic_agents_filepath,game,**kwargs):
                         #logger.info('Playing against:'+agent_name)
                         # always restore the real path
                         sys.path[:] = oldpath
-                        return cls()    
+                        return cls()
         else:
                 files = os.listdir(file_path)
                 for f in files:
@@ -605,22 +605,21 @@ def load_agent(file_path, agent_name,basic_agents_filepath,game,**kwargs):
 
                                 with open(metadata_filepath) as f:
                                         metadata = json.load(f)
-                                #logger.info('Playing against:'+agent_filepath)  
+                                #logger.info('Playing against:'+agent_filepath)
 
-                                observation = None
-                                image_based = True 
-                                if 'image_based' in metadata and metadata['image_based'] == False: # If the image_based flag is not present asume image based, if it is there and set to false the set to false.
-                                        image_based = False
-                                        if kwargs is None:
-                                                kwargs = {}
-                                        kwargs['driving_agent'] = metadata['agentplayer'] 
-                                        observation = Observation(game,**kwargs)
+#                                observation = None
+#                                image_based = True
+#                                if 'image_based' in metadata and metadata['image_based'] == False: # If the image_based flag is not present asume image based, if it is there and set to false the set to false.
+#                                        image_based = False
+#                                        if kwargs is None:
+#                                                kwargs = {}
+#                                        kwargs['driving_agent'] = metadata['agentplayer']
+#                                        observation = Observation(game,**kwargs)
                                 print("Filepath of the agent being loaded is: " + agent_filepath)
-                                if metadata['agentplayer'] == 'pelican':        
-                                        return Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
+                                if metadata['agentplayer'] == 'pelican':
+                                        return Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm']) # , observation, image_based)
                                 elif metadata['agentplayer'] == 'panther':
-                                        return Panther_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation ,image_based)
+                                        return Panther_Agent_Load_Agent(agent_filepath, metadata['algorithm']) #, observation ,image_based)
 
                         else:
                                 raise ValueError('no agent found in ', file_path)
-
