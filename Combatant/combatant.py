@@ -135,6 +135,9 @@ class Combatant:
         # 'state' is the state information that can be known by the agent
         # (i.e. the panther position is hidden from pelican agents, etc.)
         state = message["state"]
+        # convert json objects back into e.g. Torpedo instances
+        deserialized_state = deserialize_state(state)
+
         # 'obs' is a list of numbers, representing the state in the format that
         # is expected by stable_baselines
         obs = message["obs"]
@@ -143,16 +146,21 @@ class Combatant:
         obs_normalised = message["obs_normalised"]
         # 'domain_parameters' is the parameters of the domain
         domain_parameters = message["domain_parameters"]
-
-        # convert json objects back into e.g. Torpedo instances
-        deserialized_state = deserialize_state(state)
+        # 'domain_parameters_normalised' is as above, but normalised
+        domain_parameters_normalised = message["domain_parameters_normalised"]
 
         # ask the agent for the action, given this observation ( or state, ...)
         # below is an example using a stable_baselines agent, that just expects
         # the observation.
         # Modify this function call if you have a different
         # type of agent that expects different information.
-        response = self.agent.getTournamentAction(obs, obs_normalised, domain_parameters, state)
+        response = self.agent.getTournamentAction(
+            obs,
+            obs_normalised,
+            domain_parameters,
+            domain_parameters_normalised,
+            state
+        )
 
         # send the action back to the battle
         ch.basic_publish(

@@ -99,7 +99,7 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
         return self.action_lookup(action)
 
 
-    def getTournamentAction(self, obs, obs_normalised, domain_parameters, state):
+    def getTournamentAction(self, obs, obs_normalised, domain_parameters, domain_parameters_normalised, state):
         """
         PARTICIPANTS:  the example below calls model.predict on a stable_baselines
         agent that expects the observation (a list of numbers).
