@@ -197,6 +197,8 @@ class PNM():
                                                                 opponent_mixture,
                                                                 self.exploit_steps))
 
+        return filepaths, win_percentages
+
     def train_agent_against_mixture(self,
                                     exp_path,
                                     driving_agent, # agent that we train
@@ -580,9 +582,9 @@ class PNM():
                                                 self.panthers, # opponent_policy_fpaths, # policies of opponent of driving agent
                                                 mixture_panthers) # opponent_mixture)
 
-                logger.info("################################################")
-                logger.info(candidate_pelican_rbbr_win_percentages)
-                logger.info("################################################")
+                # logger.info("################################################")
+                # logger.info(candidate_pelican_rbbr_win_percentages)
+                # logger.info("################################################")
 
                 candidate_panther_rbbr_fpaths, candidate_panther_rbbr_win_percentages = self.iter_train_against_mixture(
                                                 n_rbbrs, # Number of resource bounded best responses
