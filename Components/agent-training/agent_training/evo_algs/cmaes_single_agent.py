@@ -63,8 +63,8 @@ if __name__ == '__main__':
 
     #Env variables
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/nn_single_agent_balanced.json'
-    #trained_agent = 'panther'
-    trained_agent = 'pelican'
+    trained_agent = 'panther'
+    #trained_agent = 'pelican'
     normalise_obs = True
     domain_params_in_obs = True
 
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     stats.register("min", np.min)
     stats.register("max", np.max)
 
-    num_gens = 1
+    num_gens = 200
     population, logbook = algorithms.eaGenerateUpdate(toolbox, ngen=num_gens, 
                                                       stats=stats, halloffame=hof)
 
