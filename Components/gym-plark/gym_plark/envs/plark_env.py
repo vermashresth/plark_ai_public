@@ -19,7 +19,6 @@ class PlarkEnv(gym.Env):
         def __init__(self,config_file_path=None,verbose=False, **kwargs):
                 self.kwargs = kwargs
 
-                self.normalise = kwargs.get('normalise', False)
 
                 self.random_panther_start_position = kwargs.get('random_panther_start_position', False)
 
@@ -114,6 +113,9 @@ class PlarkEnv(gym.Env):
                         self.game = self.env.activeGames[len(self.env.activeGames)-1]           
                         self.observation = classes.Observation(self.game, **kwargs)
                         self.observation_space = self.observation.get_observation_space() 
+
+                        self.normalise = self.observation.normalise
+                        self.domain_params_in_obs = self.observation.domain_params_in_obs
                         #logger.info('Non image observations created')
 
                         

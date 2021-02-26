@@ -37,25 +37,23 @@ def evaluate(genome, config_file_path, driving_agent, normalise_obs, domain_para
 
     env.reset()
 
-    max_num_steps = 200
-
     reward = 0
     obs = env._observation()
-    for step_num in range(max_num_steps):
+    while True:
         action = agent.getAction(obs)    
         obs, r, done, info = env.step(action)
         reward += r
         if done:
             break
 
-    agent.save_agent(obs_normalise=normalise)
+    #agent.save_agent(obs_normalise=normalise_obs)
 
     #print("Finished at step num:", step_num)
     #print("Reward:", reward)
     #print("Status:", info['status'])
 
     #save_video(genome, agent, env, max_num_steps, file_name='evo.mp4')
-    exit()
+    #exit()
 
     return [reward]
 
@@ -63,10 +61,10 @@ if __name__ == '__main__':
 
     #Env variables
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/nn_single_agent_balanced.json'
-    trained_agent = 'panther'
-    #trained_agent = 'pelican'
-    normalise_obs = True
-    domain_params_in_obs = True
+    #trained_agent = 'panther'
+    trained_agent = 'pelican'
+    normalise_obs = False
+    domain_params_in_obs = False
 
     #Instantiate dummy env and dummy agent
     #I need to do this to ascertain the number of weights needed in the optimisation
