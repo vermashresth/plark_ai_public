@@ -418,9 +418,13 @@ class PNM():
         value_to_pelican = 0.
         mixture_pelicans = np.array([1.])
         mixture_panthers = np.array([1.])
-        # Create DataFrame for plotting purposes
+
+        # Create DataFrames for plotting purposes
         df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff", "Pelican_supp_size", "Panther_supp_size"]
         df = pd.DataFrame(columns = df_cols)
+        # second df for period rigorous exploitability checks
+        exploit_df_cols = ["NE_Payoff", "Pelican_BR_Payoffs", "Panther_BR_Payoffs"]
+        exploit_df = pd.DataFrame(columns = exploit_df_cols)
 
         # Train best responses until Nash equilibrium is found or max_iterations are reached
         logger.info('Parallel Nash Memory (PNM)')
@@ -492,7 +496,7 @@ class PNM():
                 fig_path = os.path.join(self.exp_path, 'values_iter_%02d.pdf' % i)
                 plt.savefig(fig_path)
                 print("==========================================")
-                print("WRITTEN DF TO CSV: %s" % df_path)
+                print("WRITTEN VALUES DF TO CSV: %s" % df_path)
                 print("==========================================")
 
                 # here value_to_pelican is from the last time the subgame was solved
@@ -558,8 +562,7 @@ class PNM():
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
             testing_interval = 5
-            # if i % testing_interval == 0:
-            if i > 0:
+            if i > 0 and i % testing_interval == 0:
                 n_rbbrs = 10
                 # Find best pelican (protagonist) against panther (opponent) mixture
                 candidate_pelican_rbbr_fpaths, candidate_pelican_rbbr_win_percentages = self.iter_train_against_mixture(
@@ -575,6 +578,7 @@ class PNM():
                 logger.info("################################################")
                 logger.info('candidate_pelican_rbbr_win_percentages: %s' %  np.round(candidate_pelican_rbbr_win_percentages,2))
                 logger.info("################################################")
+                br_values_pelican = np.round(candidate_pelican_rbbr_win_percentages,2)
 
                 candidate_panther_rbbr_fpaths, candidate_panther_rbbr_win_percentages = self.iter_train_against_mixture(
                                                 n_rbbrs, # Number of resource bounded best responses
@@ -589,6 +593,21 @@ class PNM():
                 logger.info("################################################")
                 logger.info('candidate_panther_rbbr_win_percentages: %s' % np.round(candidate_panther_rbbr_win_percentages,2))
                 logger.info("################################################")
+                br_values_panther = [1-p for p in np.round(candidate_panther_rbbr_win_percentages,2)]
+
+                values = dict(zip(exploit_df_cols, [value_to_pelican, 
+                                                    br_values_pelican,
+                                                    br_values_panther]))
+                exploit_df = exploit_df.append(values, ignore_index = True)
+                # Write to csv file
+                df_path =  os.path.join(self.exp_path, 'exploit_iter_%02d.csv' % i)
+                exploit_df.to_csv(df_path, index = False)
+                # helper.get_fig(df)
+                # fig_path = os.path.join(self.exp_path, 'values_iter_%02d.pdf' % i)
+                # plt.savefig(fig_path)
+                print("==========================================")
+                print("WRITTEN EXPLOIT DF TO CSV: %s" % df_path)
+                print("==========================================")
 
                 # occasionally ouput useful things along the way
                 # Make videos
