@@ -4,6 +4,8 @@ import sys
 import logging
 import numpy as np
 
+from .panther import Panther
+from .pelican import Pelican
 from .torpedo import Torpedo
 from .sonobuoy import Sonobuoy
 from .map import Map
