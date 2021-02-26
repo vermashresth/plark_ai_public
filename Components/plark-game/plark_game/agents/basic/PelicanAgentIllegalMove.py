@@ -1,4 +1,4 @@
-from plark_game.classes import Pelican_Agent
+from plark_game.classes.pelicanAgent import Pelican_Agent
 
 class PelicanAgentIllegalMove(Pelican_Agent):
 
@@ -12,5 +12,3 @@ class PelicanAgentIllegalMove(Pelican_Agent):
 		# Always try to move up (illegal move)
 		self.moves_taken += 1
 		return self.action_lookup(0)
-
-

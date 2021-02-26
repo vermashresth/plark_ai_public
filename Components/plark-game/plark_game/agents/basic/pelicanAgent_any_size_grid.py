@@ -1,4 +1,4 @@
-from plark_game.classes import PelicanAgentFixedSBs
+from plark_game.classes.pelicanAgentFixedSBs import PelicanAgentFixedSBs
 import jsonpickle
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -27,12 +27,12 @@ class Pelican_Agent_Any_Size(PelicanAgentFixedSBs):
 
 		for sb in range(no_of_sbs):
 			new_sb = {
-				'col': sb_locations[-1]['col'] + (sb_range * 2) + 2, 
+				'col': sb_locations[-1]['col'] + (sb_range * 2) + 2,
 				'row': sb_locations[-1]['row']
 				}
 			if new_sb['col'] >= num_cols:
 				new_sb = {
-					'col': sb_locations[0]['col'] , 
+					'col': sb_locations[0]['col'] ,
 					'row': sb_locations[-1]['row'] + (sb_range * 2) + 2
 					}
 
@@ -42,4 +42,3 @@ class Pelican_Agent_Any_Size(PelicanAgentFixedSBs):
 			sb_locations.append(new_sb)
 		logger.info('sb_locations: '+str(sb_locations))
 		return sb_locations
-			

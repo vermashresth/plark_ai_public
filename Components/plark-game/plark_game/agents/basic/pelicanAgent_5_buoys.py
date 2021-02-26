@@ -1,4 +1,4 @@
-from plark_game.classes import PelicanAgentFixedSBs
+from plark_game.classes.pelicanAgentFixedSBs import PelicanAgentFixedSBs
 
 class Pelican_Agent_5_Buoys(PelicanAgentFixedSBs):
 
@@ -9,5 +9,5 @@ class Pelican_Agent_5_Buoys(PelicanAgentFixedSBs):
 			{'col':1, 'row':6},
 			{'col':4, 'row':4},
 			{'col':8, 'row':1},
-			{'col':8, 'row':7}			
+			{'col':8, 'row':7}
 		]

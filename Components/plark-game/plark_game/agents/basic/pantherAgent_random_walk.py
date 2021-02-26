@@ -2,7 +2,7 @@ import os
 from random import seed
 from random import randint
 
-from plark_game.classes import Panther_Agent
+from plark_game.classes.pantherAgent import Panther_Agent
 from plark_game import game_helper
 import jsonpickle
 
@@ -24,7 +24,7 @@ class Panther_Agent_Random_Walk(Panther_Agent):
                 seed()
                 actionValue =  actions[randint(0, len(actions)-1)]
 
-                return self.action_lookup(actionValue) 
+                return self.action_lookup(actionValue)
 
 
 

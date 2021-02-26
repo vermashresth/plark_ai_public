@@ -1,4 +1,4 @@
-from plark_game.classes import Pelican_Agent
+from plark_game.classes.pelicanAgent import Pelican_Agent
 
 class PelicanAgentTestTurn(Pelican_Agent):
 
@@ -10,5 +10,3 @@ class PelicanAgentTestTurn(Pelican_Agent):
 		action = 3 if self.moves_taken % 2 == 0 else 0
 		self.moves_taken += 1
 		return self.action_lookup(action)
-
-
