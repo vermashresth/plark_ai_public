@@ -37,9 +37,9 @@ def start_col_panther_lb(map_width):
 def start_col_panther_ub(map_width):
     return int(math.floor(0.66 * map_width))
 def start_row_panther_lb(map_height):
-    return int(math.floor(0.8 * map_height))
+    return 0
 def start_row_panther_ub(map_height):
-    return map_height-1
+    return int(math.floor(0.2 * map_height))
 
 def start_col_pelican_lb(map_width):
     return 0 
@@ -275,9 +275,9 @@ def calculate_num_param_permutations(endpoints = False):
         start_col_products_sum = 0
         for width in domain_parameter_ranges["map_width"]:
             start_col_panther_params = compute_range(start_col_panther_lb(width),
-                                                    start_col_panther_ub(width))
+                                                     start_col_panther_ub(width))
             start_col_pelican_params = compute_range(start_col_pelican_lb(width),
-                                                    start_col_pelican_ub(width))
+                                                     start_col_pelican_ub(width))
             start_col_products_sum += len(start_col_panther_params) * \
                                       len(start_col_pelican_params)
 
@@ -286,9 +286,9 @@ def calculate_num_param_permutations(endpoints = False):
         start_row_products_sum = 0
         for height in domain_parameter_ranges["map_height"]:
             start_row_panther_params = compute_range(start_row_panther_lb(height),
-                                                    start_row_panther_ub(height))
+                                                     start_row_panther_ub(height))
             start_row_pelican_params = compute_range(start_row_pelican_lb(height),
-                                                    start_row_pelican_ub(height))
+                                                     start_row_pelican_ub(height))
             start_row_products_sum += len(start_row_panther_params) * \
                                       len(start_row_pelican_params)
 
@@ -298,9 +298,11 @@ def calculate_num_param_permutations(endpoints = False):
 
 #Call examples
 
-#rand_params = generate_random_param_instance(return_dict=True, endpoints=True)
+#rand_params = generate_random_param_instance(return_dict=True, endpoints=False)
+#print(rand_params)
 
-#num_param_perms = calculate_num_param_permutations(endpoints=True)
+num_param_perms = calculate_num_param_permutations(endpoints=False)
+print("Number of parameter permutations:", num_param_perms)
 
 #all_permutations = compute_all_permutations(domain_parameter_ranges, 
-#                                            return_dict=False, endpoints=True)
+#                                            return_dict=False, endpoints=False)
