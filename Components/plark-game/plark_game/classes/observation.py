@@ -7,462 +7,411 @@ logger = logging.getLogger(__name__)
 
 class Observation():
 
-        #I have made game config a compulsory argument here so that I can flag anywhere in 
-        #the code where it is not passed - despite that fact that one might not use it
-        def __init__(self, game, **kwargs):
-                self.game = game
-                self.kwargs = kwargs
-                if self.kwargs.get('driving_agent'):
-                        self.driving_agent = self.kwargs.get('driving_agent')
-                else:
-                        self.driving_agent = 'pelican'
-                        self.kwargs['driving_agent'] = self.driving_agent
+    def __init__(self, game, **kwargs):
+        self.game = game
+        self.kwargs = kwargs
+        if self.kwargs.get('driving_agent'):
+            self.driving_agent = self.kwargs.get('driving_agent')
+        else:
+            self.driving_agent = 'pelican'
+            self.kwargs['driving_agent'] = self.driving_agent
 
-                #A boolean flag to indicate whether to add the domain parameters to the
-                #observation space
-                self.domain_params_in_obs = kwargs.get('domain_params_in_obs', False)
-                print("Domain params bool:", self.domain_params_in_obs)
+        #A boolean flag to indicate whether to add the domain parameters to the
+        #observation space
+        self.domain_params_in_obs = kwargs.get('domain_params_in_obs', False)
 
-                self.max_grid_width = 30
-                self.max_grid_height = 30
-                self.max_sonobuoys = 25
-                self.max_turns = 40
-                self.max_pelican_moves = 25
-                self.max_panther_moves = 5
-                self.max_torpedoes = 25
-                self.max_torpedo_turns = 3
-                self.max_torpedo_speed = 3
+        #A boolean flag to determine whether to normalise the observations
+        self.normalise = self.kwargs.get('normalise', False)
 
-                #Simon's upper bounds
-                #self.max_grid_width = 35
-                #self.max_grid_height = 35
-                #self.max_sonobuoys = 25
-                #self.max_turns = 50
-                #self.max_pelican_moves = 25
-                #self.max_panther_moves = 3
-                #self.max_torpedoes = 5
-                #self.max_torpedo_turns = 3
-                #self.max_torpedo_speed = 4
-                self.max_torp_search_range = 4
-                self.max_sonobuoy_active_range = 4
+        #self.num_remaining_domain_params = len(self._determine_remaining_domain_parameters())
 
-                #These arguments don't even seem to be passed - kwargs doesn't contain
-                #any of these
-                # self.max_grid_width = kwargs.get('max_grid_width',30)
-                # self.max_grid_height = kwargs.get('max_grid_height',30)
-                # self.max_sonobuoys = kwargs.get('max_sonobuoys', 25)
-                # self.max_turns = kwargs.get('max_turns', 40)
-                # self.max_pelican_moves = kwargs.get('max_pelican_moves', 25)
-                # self.max_panther_moves = kwargs.get('max_panther_moves', 5)
-                # self.max_torpedoes = kwargs.get('max_torpedoes', 25)
-                # self.max_torpedo_turns = kwargs.get('max_torpedo_turns', 3)
-                # self.max_torpedo_speed = kwargs.get('max_torpedo_speed', 3)
+        #Old max maxs - before Simon's upper bounds
+        self.max_grid_width = 30
+        self.max_grid_height = 30
+        self.max_sonobuoys = 25
+        self.max_turns = 40
+        self.max_pelican_moves = 25
+        self.max_panther_moves = 5
+        self.max_torpedoes = 25
+        self.max_torpedo_turns = 3
+        self.max_torpedo_speed = 3
 
-                self.pelican_col = 0 
-                self.pelican_row = 0
-                self.panther_col = 0
-                self.panther_row = 0 
+        #Simon's upper bounds
+        #self.max_grid_width = 35
+        #self.max_grid_height = 35
+        #self.max_sonobuoys = 25
+        #self.max_turns = 50
+        #self.max_pelican_moves = 25
+        #self.max_panther_moves = 3
+        #self.max_torpedoes = 5
+        #self.max_torpedo_turns = 3
+        #self.max_torpedo_speed = 4
+        self.max_torp_search_range = 4
+        self.max_sonobuoy_active_range = 4
 
+        self.pelican_col = 0 
+        self.pelican_row = 0
+        self.panther_col = 0
+        self.panther_row = 0 
 
-                #logger.info('non-image observation space')
-                obs_shape = []
-                obs_label = [] 
+        #Obs shape is a list of the MAX values that all of the states will ever take
+        #The size of this list is required by stable baslines in order to determine
+        #the number of inputs - I think
+        obs_shape = []
 
-                # Represent the chosen grid width
-                assert game.map_width <= self.max_grid_width, "Game width must not be greater than max grid width: {}".format(self.max_grid_width)
-                assert game.map_height <= self.max_grid_height, "Game height must not be greater than max grid height: {}".format(self.max_grid_width)
-                obs_shape.append(self.max_grid_width)
-                obs_label.append('max_grid_width')
-                obs_shape.append(self.max_grid_height)
-                obs_label.append('max_grid_height')
-                # Number of turns remaining
-                assert game.maxTurns <= self.max_turns, "Game max turns must not be greater than max possible turns: {}".format(self.max_turns)
-                obs_shape.append(self.max_turns)
-                obs_label.append('max_turns')   
-                if self.driving_agent == 'pelican':
-                        # Number of moves remaining per turn
-                        assert game.pelican_parameters['move_limit'] <= self.max_pelican_moves, "Game move limit must not be greater than max move limit: {}".format(self.max_pelican_moves)
-                        obs_shape.append(self.max_pelican_moves)
-                        obs_label.append('max_pelican_moves')   
-                        # Pelican location
-                        obs_shape.append(self.max_grid_width)
-                        obs_label.append('pel x')       
-                        obs_shape.append(self.max_grid_height)
-                        obs_label.append('pel y')       
-                        
-                        # Madman status - this is a boolean
-                        obs_shape.append(2)
-                        obs_label.append('madman')      
+        # Represent the chosen grid width
+        assert game.map_width <= self.max_grid_width, "Game width must not be greater than max grid width: {}".format(self.max_grid_width)
+        assert game.map_height <= self.max_grid_height, "Game height must not be greater than max grid height: {}".format(self.max_grid_width)
+        obs_shape.append(self.max_grid_width)
+        obs_shape.append(self.max_grid_height)
+        # Number of turns remaining
+        assert game.maxTurns <= self.max_turns, "Game max turns must not be greater than max possible turns: {}".format(self.max_turns)
+        obs_shape.append(self.max_turns)
 
-                        # sonobuoy range
-                        self.max_sb_range = int(max(self.max_grid_height, self.max_grid_width)/2)
-                        assert game.sonobuoy_parameters['active_range'] <= self.max_sb_range, "Sonobuoy active range must not be greater than max range: {}".format(self.max_sb_range)
-                        obs_shape.append(self.max_sb_range)
-                        obs_label.append('max_sb_range')        
+        if self.driving_agent == 'pelican':
+            # Number of moves remaining per turn
+            assert game.pelican_parameters['move_limit'] <= self.max_pelican_moves, "Game move limit must not be greater than max move limit: {}".format(self.max_pelican_moves)
+            obs_shape.append(self.max_pelican_moves)
+            # Pelican location
+            obs_shape.append(self.max_grid_width)
+            obs_shape.append(self.max_grid_height)
+            
+            # Madman status - this is a boolean
+            obs_shape.append(2)
 
-                        # Number of sonobuoys remaining
-                        assert game.pelican_parameters['default_sonobuoys'] <= self.max_sonobuoys, "Starting number of sonobuoys must not be greater than maximum possible sonobuoys: {}".format(self.max_sonobuoys)
-                        obs_shape.append(self.max_sonobuoys)
-                        obs_label.append('max_sonobuoys')       
+            # sonobuoy range
+            self.max_sb_range = int(max(self.max_grid_height, self.max_grid_width)/2)
+            assert game.sonobuoy_parameters['active_range'] <= self.max_sb_range, "Sonobuoy active range must not be greater than max range: {}".format(self.max_sb_range)
+            obs_shape.append(self.max_sb_range)
 
-                        # sonobuoy locations and activations
-                        for i in range(self.max_sonobuoys):
-                                # location (max_height+1, max_width+1) represents undeployed
-                                obs_shape.append(self.max_grid_width+1)
-                                obs_label.append('sb x')        
-                                obs_shape.append(self.max_grid_height+1)
-                                obs_label.append('sb y')        
-                                # binary: 0=inactive, 1=active
-                                obs_shape.append(2)
-                                obs_label.append('sb active')
+            # Number of sonobuoys remaining
+            assert game.pelican_parameters['default_sonobuoys'] <= self.max_sonobuoys, "Starting number of sonobuoys must not be greater than maximum possible sonobuoys: {}".format(self.max_sonobuoys)
+            obs_shape.append(self.max_sonobuoys)
 
-                        # Number of torpedoes remaining
-                        assert game.pelican_parameters['default_torps'] <= self.max_torpedoes, "Starting number of sonobuoys must not be greater than maximum possible sonobuoys: {}".format(self.max_torpedoes)
-                        obs_shape.append(self.max_torpedoes)
-                        obs_label.append('max_torpedoes')
+            # sonobuoy locations and activations
+            for i in range(self.max_sonobuoys):
+                # location (max_height+1, max_width+1) represents undeployed
+                obs_shape.append(self.max_grid_width+1)
+                obs_shape.append(self.max_grid_height+1)
+                # binary: 0=inactive, 1=active
+                obs_shape.append(2)
 
-                        # Torpedo hunt enabled - boolean
-                        obs_shape.append(2)
-                        obs_label.append('Torpedo hunt enabled bool')
+            # Number of torpedoes remaining
+            assert game.pelican_parameters['default_torps'] <= self.max_torpedoes, "Starting number of sonobuoys must not be greater than maximum possible sonobuoys: {}".format(self.max_torpedoes)
+            obs_shape.append(self.max_torpedoes)
 
-                        # Torpedo speeds for each turn
-                        assert game.torpedo_parameters['turn_limit'] <= self.max_torpedo_turns, "Torpedo turn limit must not be greater than the maximum torpedo turns: {}".format(self.max_torpedo_turns)
-                        for speed in game.torpedo_parameters['speed']:
-                                assert speed <= self.max_torpedo_speed, "Torpedo speed for each turn must not be greater than the maximum torpedo speed: {}".format(self.max_torpedo_speed)
-                        for turn in range(self.max_torpedo_turns):
-                                # speed can also be zero:
-                                # e.g. max speed of 3 leads to possible values [0,1,2,3]
-                                obs_shape.append(self.max_torpedo_speed+1)
-                                obs_label.append('max_torpedo_speed+1')
+            # Torpedo hunt enabled - boolean
+            obs_shape.append(2)
 
-                        # torpedo locations
-                        for i in range(self.max_torpedoes):
-                                # location (max_height+1, max_width+1) represents undeployed
-                                obs_shape.append(self.max_grid_width+1)
-                                obs_label.append('torp x')
-                                obs_shape.append(self.max_grid_height+1)
-                                obs_label.append('torp y')
+            # Torpedo speeds for each turn
+            assert game.torpedo_parameters['turn_limit'] <= self.max_torpedo_turns, "Torpedo turn limit must not be greater than the maximum torpedo turns: {}".format(self.max_torpedo_turns)
+            for speed in game.torpedo_parameters['speed']:
+                assert speed <= self.max_torpedo_speed, "Torpedo speed for each turn must not be greater than the maximum torpedo speed: {}".format(self.max_torpedo_speed)
+            for turn in range(self.max_torpedo_turns):
+                # speed can also be zero:
+                # e.g. max speed of 3 leads to possible values [0,1,2,3]
+                obs_shape.append(self.max_torpedo_speed+1)
 
-                        
-                else:
-                        # Number of moves remaining per turn
-                        assert game.panther_parameters['move_limit'] <= self.max_panther_moves, "Game move limit must not be greater than max move limit: {}".format(self.max_panther_moves)
-                        obs_shape.append(self.max_panther_moves)
-                        obs_label.append('max_panther_moves')
-                        # Pelican location
-                        obs_shape.append(self.max_grid_width)
-                        obs_label.append('pel x')
-                        obs_shape.append(self.max_grid_height)
-                        obs_label.append('pel y')
-                        
-                        # Panther location
-                        obs_shape.append(self.max_grid_width)
-                        obs_label.append('pan x')
-                        obs_shape.append(self.max_grid_height)
-                        obs_label.append('pan y')
-                        
-                        # Madman status - this is a boolean
-                        obs_shape.append(2)
-                        obs_label.append('madman')
+            # torpedo locations
+            for i in range(self.max_torpedoes):
+                # location (max_height+1, max_width+1) represents undeployed
+                obs_shape.append(self.max_grid_width+1)
+                obs_shape.append(self.max_grid_height+1)
 
-                        # sonobuoy range
-                        self.max_sb_range = int(max(self.max_grid_height, self.max_grid_width)/2)
-                        assert game.sonobuoy_parameters['active_range'] <= self.max_sb_range, "Sonobuoy active range must not be greater than max range: {}".format(self.max_sb_range)
-                        obs_shape.append(self.max_sb_range)
-                        obs_label.append('max_sb_range')
+        else:
+            # Number of moves remaining per turn
+            assert game.panther_parameters['move_limit'] <= self.max_panther_moves, "Game move limit must not be greater than max move limit: {}".format(self.max_panther_moves)
+            obs_shape.append(self.max_panther_moves)
+            # Pelican location
+            obs_shape.append(self.max_grid_width)
+            obs_shape.append(self.max_grid_height)
+            
+            # Panther location
+            obs_shape.append(self.max_grid_width)
+            obs_shape.append(self.max_grid_height)
+            
+            # Madman status - this is a boolean
+            obs_shape.append(2)
 
-                        # Number of sonobuoys remaining
-                        assert game.pelican_parameters['default_sonobuoys'] <= self.max_sonobuoys, "Starting number of sonobuoys must not be greater than maximum possible sonobuoys: {}".format(self.max_sonobuoys)
-                        obs_shape.append(self.max_sonobuoys)
-                        obs_label.append('max_sonobuoys')
+            # sonobuoy range
+            self.max_sb_range = int(max(self.max_grid_height, self.max_grid_width)/2)
+            assert game.sonobuoy_parameters['active_range'] <= self.max_sb_range, "Sonobuoy active range must not be greater than max range: {}".format(self.max_sb_range)
+            obs_shape.append(self.max_sb_range)
+
+            # Number of sonobuoys remaining
+            assert game.pelican_parameters['default_sonobuoys'] <= self.max_sonobuoys, "Starting number of sonobuoys must not be greater than maximum possible sonobuoys: {}".format(self.max_sonobuoys)
+            obs_shape.append(self.max_sonobuoys)
 
 
-                        # sonobuoy locations and activations
-                        for i in range(self.max_sonobuoys):
-                                # location (max_height+1, max_width+1) represents undeployed
-                                obs_shape.append(self.max_grid_width+1)
-                                obs_label.append('sb x')
-                                obs_shape.append(self.max_grid_height+1)
-                                obs_label.append('sb y')
-                                # binary: 0=inactive, 1=active
-                                obs_shape.append(2)
-                                obs_label.append('sb active')
+            # sonobuoy locations and activations
+            for i in range(self.max_sonobuoys):
+                # location (max_height+1, max_width+1) represents undeployed
+                obs_shape.append(self.max_grid_width+1)
+                obs_shape.append(self.max_grid_height+1)
+                # binary: 0=inactive, 1=active
+                obs_shape.append(2)
 
-                        # Number of torpedoes remaining
-                        assert game.pelican_parameters['default_torps'] <= self.max_torpedoes, "Starting number of sonobuoys must not be greater than maximum possible sonobuoys: {}".format(self.max_torpedoes)
-                        obs_shape.append(self.max_torpedoes)
-                        obs_label.append('max_torpedoes')
+            # Number of torpedoes remaining
+            assert game.pelican_parameters['default_torps'] <= self.max_torpedoes, "Starting number of sonobuoys must not be greater than maximum possible sonobuoys: {}".format(self.max_torpedoes)
+            obs_shape.append(self.max_torpedoes)
 
-                        # Torpedo hunt enabled - boolean
-                        obs_shape.append(2)
-                        obs_label.append('torpedo hunt bool')
+            # Torpedo hunt enabled - boolean
+            obs_shape.append(2)
 
-                        # Torpedo speeds for each turn
-                        assert game.torpedo_parameters['turn_limit'] <= self.max_torpedo_turns, "Torpedo turn limit must not be greater than the maximum torpedo turns: {}".format(self.max_torpedo_turns)
-                        for speed in game.torpedo_parameters['speed']:
-                                assert speed <= self.max_torpedo_speed, "Torpedo speed for each turn must not be greater than the maximum torpedo speed: {}".format(self.max_torpedo_speed)
-                        for turn in range(self.max_torpedo_turns):
-                                # speed can also be zero:
-                                # e.g. max speed of 3 leads to possible values [0,1,2,3]
-                                obs_shape.append(self.max_torpedo_speed+1)
-                                obs_label.append('max_torpedo_speed')
+            # Torpedo speeds for each turn
+            assert game.torpedo_parameters['turn_limit'] <= self.max_torpedo_turns, "Torpedo turn limit must not be greater than the maximum torpedo turns: {}".format(self.max_torpedo_turns)
+            for speed in game.torpedo_parameters['speed']:
+                assert speed <= self.max_torpedo_speed, "Torpedo speed for each turn must not be greater than the maximum torpedo speed: {}".format(self.max_torpedo_speed)
+            for turn in range(self.max_torpedo_turns):
+                # speed can also be zero:
+                # e.g. max speed of 3 leads to possible values [0,1,2,3]
+                obs_shape.append(self.max_torpedo_speed+1)
 
-                        # torpedo locations
-                        for i in range(self.max_torpedoes):
-                                # location (max_height+1, max_width+1) represents undeployed
-                                obs_shape.append(self.max_grid_height+1)
-                                obs_label.append('torp x')
-                                obs_shape.append(self.max_grid_width+1)
-                                obs_label.append('torp y')
+            # torpedo locations
+            for i in range(self.max_torpedoes):
+                # location (max_height+1, max_width+1) represents undeployed
+                obs_shape.append(self.max_grid_height+1)
+                obs_shape.append(self.max_grid_width+1)
 
-                #Add max domain params if flag is true
-                if self.domain_params_in_obs:
-                    #Map width, map height, active range are already given so leave them out
-                    obs_shape.append(self.max_sonobuoys) 
-                    obs_label.append('max_sonobuoys')
-                    obs_shape.append(self.max_turns) 
-                    obs_label.append('max_turns')
-                    obs_shape.append(self.max_pelican_moves) 
-                    obs_label.append('max_pelican_moves')
-                    obs_shape.append(self.max_panther_moves) 
-                    obs_label.append('max_panther_moves')
-                    obs_shape.append(self.max_torpedoes) 
-                    obs_label.append('max_torpedoes')
-                    obs_shape.append(self.max_torpedo_turns) 
-                    obs_label.append('max_torpedo_turns')
-                    for i in range(self.max_torpedo_turns):
-                        obs_shape.append(self.max_torpedo_speed)
-                        obs_label.append('max_torpedo_speed_'+str(i))
-                    obs_shape.append(self.max_torp_search_range) 
-                    obs_label.append('max_torp_search_range')
+        #Add max domain params
+        self.domain_params_obs_shape = []
 
-                obs_shape_new = []
-                for i in obs_shape:
-                        obs_shape_new.append(i+1)
-                obs_shape = obs_shape_new       
-                self.observation_max_for_normalisation = obs_shape
-                self.observation_space = spaces.MultiDiscrete(obs_shape)
-                # logger.info("Observation space: MultiDiscrete: {}".format(obs_shape))
-                # logger.info("Observation space: MultiDiscrete: {}".format(obs_label)) 
-                self.obs_label = obs_label
+        #Map width, map height, active range are already given so leave them out
+        self.domain_params_obs_shape.append(self.max_sonobuoys) 
+        self.domain_params_obs_shape.append(self.max_turns) 
+        self.domain_params_obs_shape.append(self.max_pelican_moves) 
+        self.domain_params_obs_shape.append(self.max_panther_moves) 
+        self.domain_params_obs_shape.append(self.max_torpedoes) 
+        self.domain_params_obs_shape.append(self.max_torpedo_turns) 
+        for i in range(self.max_torpedo_turns):
+            self.domain_params_obs_shape.append(self.max_torpedo_speed)
+        self.domain_params_obs_shape.append(self.max_torp_search_range) 
 
-                #I don't think self.obs_label is used? When you uncomment below,
-                #nothing happens
-                #self.obs_label = None
+        #Add max domain params to obs_shape if flag is true
+        if self.domain_params_in_obs:
+            obs_shape += self.domain_params_obs_shape
 
-        def get_observation_space(self):
-                return self.observation_space
+        #Goes through and adds 1 to everything
+        #I just end up taking this away later anyway :/
+        obs_shape_new = []
+        for i in obs_shape:
+            obs_shape_new.append(i+1)
+        obs_shape = obs_shape_new       
+        self.domain_params_obs_shape = np.array(self.domain_params_obs_shape)+1
 
-        def _get_location(self, board, item):
-                for col in range(board.cols):
-                        for row in range(board.rows):
-                                if board.is_item_type_in_cell(item, col, row):
-                                        return (col, row)
-                return (None,None)                      
+        self.observation_max_for_normalisation = obs_shape
+        self.observation_space = spaces.MultiDiscrete(obs_shape)
 
-        def get_observation(self, state):
-                obs_label_from_state = []  
-                #logger.info("State: {}".format(state))
-                new_pelican_col,new_pelican_row = self._get_location(self.game.gameBoard, "PELICAN")
-                if new_pelican_col is not None:
-                        self.pelican_col = new_pelican_col
-                        self.pelican_row = new_pelican_row
-                state['pelican_location'] =  {'col': self.pelican_col, 'row': self.pelican_row}
+    def get_observation_space(self):
+        return self.observation_space
 
-                new_panther_col, new_panther_row = self._get_location(self.game.gameBoard, "PANTHER")
-                if new_panther_col is not None:
-                        self.panther_col = new_panther_col
-                        self.panther_row = new_panther_row
-                state['panther_location'] =  {'col': self.panther_col, 'row': self.panther_row}
-                state['madman_status'] = self.game.pelicanPlayer.madmanStatus
-                state['sonobuoy_range'] = self.game.sonobuoy_parameters['active_range']
+    def _get_location(self, board, item):
+        for col in range(board.cols):
+            for row in range(board.rows):
+                if board.is_item_type_in_cell(item, col, row):
+                    return (col, row)
+        return (None,None)                      
 
+    #Do not call! Private function
+    def __determine_pelican_specific_observations(self, state, obs):
+        # Remaining moves
+        remaining_pelican_moves = state['pelican_max_moves']  - state['pelican_move_in_turn'] 
+        obs.append(remaining_pelican_moves)
+        # Pelican location
+        obs += [state['pelican_location']['col'], state['pelican_location']['row']]
+        # Madman status
+        obs.append(int(state['madman_status']))
+        # Sonobuoy range - fixed per game
+        obs.append(state['sonobuoy_range'])
+        # Remaining Sonobuoys
+        obs.append(state['remaining_sonobuoys'])
+        # sonobuoy locations & activations
+        for i in range(self.max_sonobuoys):
+            if i < len(state['deployed_sonobuoys']):
+                buoy = state['deployed_sonobuoys'][i]
+                active = 1 if buoy['state'] == "HOT" else 0
+                obs += [buoy['col'], buoy['row'], active]
+            else:
+                obs += [self.max_grid_width+1, self.max_grid_height+1, 0]
 
-                pelican_payload = self.game.pelicanPlayer.payload
-                remaining_sbs = len([obj for obj in pelican_payload if obj.type == "SONOBUOY"])
-                remaining_torps = len([obj for obj in pelican_payload if obj.type == "TORPEDO"])
-                state['remaining_sonobuoys'] = remaining_sbs
-                state['deployed_sonobuoys'] = [{'col': b.col, 'row': b.row, 'state': b.state} for b in self.game.globalSonobuoys]
-                state['remaining_torpedoes'] = remaining_torps
-                state['torpedo_hunt_enabled'] = self.game.torpedo_parameters['hunt']
-                state['torpedo_speeds'] = self.game.torpedo_parameters['speed']
-                state['deployed_torpedoes'] = [{'col': t.col, 'row': t.row} for t in self.game.globalTorps]
+        # Remaining Torpedoes
+        obs.append(state['remaining_torpedoes'])
+        # Torpedo hunt enabled
+        obs.append(int(state['torpedo_hunt_enabled']))
+        # Torpedo speeds per turn
+        for i in range (self.max_torpedo_turns):
+            if  i < len(state['torpedo_speeds']):
+                speed = state['torpedo_speeds'][i]
+                obs.append(speed)
+            else:
+                obs.append(0)
 
-                obs = []
-                # Current game dimensions - fixed per game
-                obs += [state['map_width'], state['map_height']]
-                obs_label_from_state.append('map_width')
-                obs_label_from_state.append('map_height')
-                # Remaining turns
-                remaining_turns = state['maxTurns'] - state['turn_count']
-                obs.append(remaining_turns)
-                obs_label_from_state.append('remaining_turns')
-                if self.driving_agent == 'pelican':
-                        # Remaining moves
-                        remaining_pelican_moves = state['pelican_max_moves']  - state['pelican_move_in_turn'] 
-                        obs.append(remaining_pelican_moves)
-                        obs_label_from_state.append('remaining_pelican_moves')
-                        # Pelican location
-                        obs += [state['pelican_location']['col'], state['pelican_location']['row']]
-                        obs_label_from_state.append('pel x')
-                        obs_label_from_state.append('pel y')
-                        # Madman status
-                        obs.append(int(state['madman_status']))
-                        obs_label_from_state.append('madman_status')
-                        # Sonobuoy range - fixed per game
-                        obs.append(state['sonobuoy_range'])
-                        obs_label_from_state.append('sonobuoy_range')
-                        # Remaining Sonobuoys
-                        obs.append(state['remaining_sonobuoys'])
-                        obs_label_from_state.append('remaining_sonobuoys')
-                        # sonobuoy locations & activations
-                        for i in range(self.max_sonobuoys):
-                                if i < len(state['deployed_sonobuoys']):
-                                        buoy = state['deployed_sonobuoys'][i]
-                                        active = 1 if buoy['state'] == "HOT" else 0
-                                        obs += [buoy['col'], buoy['row'], active]
-                                        obs_label_from_state.append('sb x')
-                                        obs_label_from_state.append('sb y')
-                                        obs_label_from_state.append('sb active')
-                                else:
-                                        obs += [self.max_grid_width+1, self.max_grid_height+1, 0]
-                                        obs_label_from_state.append('sb x')
-                                        obs_label_from_state.append('sb y')
-                                        obs_label_from_state.append('sb active')
+        # torpedo locations & activations
+        for i in range(self.max_torpedoes):
+            if i < len(state['deployed_torpedoes']):
+                torp = state['deployed_torpedoes'][i]
+                obs += [torp['col'], torp['row']]
+            else:
+                obs += [self.max_grid_width+1, self.max_grid_height+1]
 
-                        # Remaining Torpedoes
-                        obs.append(state['remaining_torpedoes'])
-                        obs_label_from_state.append('remaining_torpedoes')
-                        # Torpedo hunt enabled
-                        obs.append(int(state['torpedo_hunt_enabled']))
-                        obs_label_from_state.append('torpedo_hunt_enabled')
-                        # Torpedo speeds per turn
-                        for i in range (self.max_torpedo_turns):
-                                if  i < len(state['torpedo_speeds']):
-                                        speed = state['torpedo_speeds'][i]
-                                        obs.append(speed)
-                                        obs_label_from_state.append('tp speed')
-                                else:
-                                        obs.append(0)
-                                        obs_label_from_state.append('tp speed')
+        return obs
 
-                        # torpedo locations & activations
-                        for i in range(self.max_torpedoes):
-                                if i < len(state['deployed_torpedoes']):
-                                        torp = state['deployed_torpedoes'][i]
-                                        obs += [torp['col'], torp['row']]
-                                        obs_label_from_state.append('torp x')
-                                        obs_label_from_state.append('torp y')
-                                else:
-                                        obs += [self.max_grid_width+1, self.max_grid_height+1]
-                                        obs_label_from_state.append('torp x')
-                                        obs_label_from_state.append('torp y')
-                else:
-                        # Remaining moves
-                        remaining_panther_moves = state['panther_max_moves']  - state['panther_move_in_turn'] 
-                        obs.append(remaining_panther_moves)
-                        obs_label_from_state.append('remaining_panther_moves')
-                        # Pelican location
-                        obs += [state['pelican_location']['col'], state['pelican_location']['row']]
-                        obs_label_from_state.append('pel x')
-                        obs_label_from_state.append('pel y')
-                        # Panther location
-                        obs += [state['panther_location']['col'], state['panther_location']['row']]
-                        obs_label_from_state.append('pan x')
-                        obs_label_from_state.append('pan y')
-                        # Madman status
-                        obs.append(int(state['madman_status']))
-                        obs_label_from_state.append('madman_status')
-                        # Sonobuoy range - fixed per game
-                        obs.append(state['sonobuoy_range'])
-                        obs_label_from_state.append('sonobuoy_range')
-                        # Remaining Sonobuoys
-                        obs.append(state['remaining_sonobuoys'])
-                        obs_label_from_state.append('remaining_sonobuoys')
-                        # sonobuoy locations & activations
-                        for i in range(self.max_sonobuoys):
-                                if i < len(state['deployed_sonobuoys']):
-                                        buoy = state['deployed_sonobuoys'][i]
-                                        active = 1 if buoy['state'] == "HOT" else 0
-                                        obs += [buoy['col'], buoy['row'], active]
-                                        obs_label_from_state.append('sb x')
-                                        obs_label_from_state.append('sb y')
-                                        obs_label_from_state.append('sb active')
-                                else:
-                                        obs += [self.max_grid_width+1, self.max_grid_height+1, 0]
-                                        obs_label_from_state.append('sb x')
-                                        obs_label_from_state.append('sb y')
-                                        obs_label_from_state.append('sb active')
+    #Do not call! Private function
+    def __determine_panther_specific_observations(self, state, obs):
+        # Remaining moves
+        remaining_panther_moves = state['panther_max_moves']  - state['panther_move_in_turn'] 
+        obs.append(remaining_panther_moves)
+        # Pelican location
+        obs += [state['pelican_location']['col'], state['pelican_location']['row']]
+        # Panther location
+        obs += [state['panther_location']['col'], state['panther_location']['row']]
+        # Madman status
+        obs.append(int(state['madman_status']))
+        # Sonobuoy range - fixed per game
+        obs.append(state['sonobuoy_range'])
+        # Remaining Sonobuoys
+        obs.append(state['remaining_sonobuoys'])
+        # sonobuoy locations & activations
+        for i in range(self.max_sonobuoys):
+            if i < len(state['deployed_sonobuoys']):
+                buoy = state['deployed_sonobuoys'][i]
+                active = 1 if buoy['state'] == "HOT" else 0
+                obs += [buoy['col'], buoy['row'], active]
+            else:
+                obs += [self.max_grid_width+1, self.max_grid_height+1, 0]
 
-                        # Remaining Torpedoes
-                        obs.append(state['remaining_torpedoes'])
-                        obs_label_from_state.append('remaining_torpedoes')
-                        # Torpedo hunt enabled
-                        obs.append(int(state['torpedo_hunt_enabled']))
-                        obs_label_from_state.append('torpedo_hunt_enabled')
+        # Remaining Torpedoes
+        obs.append(state['remaining_torpedoes'])
+        # Torpedo hunt enabled
+        obs.append(int(state['torpedo_hunt_enabled']))
 
-                        # Torpedo speeds per turn
-                        for i in range (self.max_torpedo_turns):
-                                if  i < len(state['torpedo_speeds']):
-                                        speed = state['torpedo_speeds'][i]
-                                        obs.append(speed)
-                                        obs_label_from_state.append('tp speed')
-                                else:
-                                        obs.append(0)
-                                        obs_label_from_state.append('tp speed')
+        # Torpedo speeds per turn
+        for i in range (self.max_torpedo_turns):
+            if  i < len(state['torpedo_speeds']):
+                speed = state['torpedo_speeds'][i]
+                obs.append(speed)
+            else:
+                obs.append(0)
 
-                        # torpedo locations & activations
-                        for i in range(self.max_torpedoes):
-                                if i < len(state['deployed_torpedoes']):
-                                        torp = state['deployed_torpedoes'][i]
-                                        obs += [torp['col'], torp['row']]
-                                        obs_label_from_state.append('torp x')
-                                        obs_label_from_state.append('torp y')
-                                else:
-                                        obs += [self.max_grid_width+1, self.max_grid_height+1]
-                                        obs_label_from_state.append('torp x')
-                                        obs_label_from_state.append('torp y')
+        # torpedo locations & activations
+        for i in range(self.max_torpedoes):
+            if i < len(state['deployed_torpedoes']):
+                torp = state['deployed_torpedoes'][i]
+                obs += [torp['col'], torp['row']]
+            else:
+                obs += [self.max_grid_width+1, self.max_grid_height+1]
 
-                #If flag is true, add domain params to the observation space
-                #Max width, max height and active range are already added above
-                if self.domain_params_in_obs:
-                    obs.append(self.game.pelican_parameters['default_sonobuoys'])
-                    obs_label_from_state.append('max_sonobuoys')
-                    obs.append(self.game.maxTurns)
-                    obs_label_from_state.append('max_turns')
-                    obs.append(self.game.pelican_parameters['move_limit']) 
-                    obs_label_from_state.append('max_pelican_moves')
-                    obs.append(self.game.panther_parameters['move_limit']) 
-                    obs_label_from_state.append('max_panther_moves')
-                    obs.append(self.game.pelican_parameters['default_torps']) 
-                    obs_label_from_state.append('max_torpedoes')
-                    obs.append(self.game.torpedo_parameters['turn_limit']) 
-                    obs_label_from_state.append('max_torpedo_turns')
-                    #Default value for torpedo speed is 0 if there are not maximum
-                    #torpedo turns
-                    torp_speeds = [0] * self.max_torpedo_turns
-                    for i in range(len(torp_speeds)):
-                        if i < len(self.game.torpedo_parameters['speed']):
-                            torp_speeds[i] = self.game.torpedo_parameters['speed'][i]
-                        obs_label_from_state.append('torpedo_speed_'+str(i))
-                    obs += torp_speeds
-                    obs.append(self.game.torpedo_parameters['search_range']) 
-                    obs_label_from_state.append('max_torp_search_range')
+        return obs
 
-                #logger.info("Observation: {}".format(obs))
-                #logger.info("Observation space size: {}".format(len(obs)))
-                #logger.info("Observation labels: {}".format(obs_label_from_state))
-                #logger.info("Observation labels size: {}".format(len(obs_label_from_state)))
+    #Get numpy array of remaining domain parameters - by remaining domain parameters, I
+    #mean the domain parameters that have not yet been added to observation (map_width,
+    #map_height and sonobuoy_range/active_range have already been added)
+    def _determine_remaining_domain_parameters(self, normalise=False):
 
-                #I don't think obs_label_from_state is used - commenting out below 
-                #does not have an effect
-                #In fact, it is not even returned from this function nor set as a 
-                #member variable? Unless it is being used because Python can access
-                #variables outside the scope that it is declared in :/
-                #obs_label_from_state = None
+        domain_params = []
+        domain_params.append(self.game.pelican_parameters['default_sonobuoys'])
+        domain_params.append(self.game.maxTurns)
+        domain_params.append(self.game.pelican_parameters['move_limit']) 
+        domain_params.append(self.game.panther_parameters['move_limit']) 
+        domain_params.append(self.game.pelican_parameters['default_torps']) 
+        domain_params.append(self.game.torpedo_parameters['turn_limit']) 
+        #Default value for torpedo speed is 0 if there are not maximum
+        #torpedo turns
+        torp_speeds = [0] * self.max_torpedo_turns
+        for i in range(len(torp_speeds)):
+            if i < len(self.game.torpedo_parameters['speed']):
+                torp_speeds[i] = self.game.torpedo_parameters['speed'][i]
+        domain_params += torp_speeds
+        domain_params.append(self.game.torpedo_parameters['search_range']) 
 
-                if self.kwargs.get('normalise', False):
-                    obs_maxs = np.array(self.observation_max_for_normalisation) - 1
-                    return np.divide(np.array(obs), obs_maxs)
-                else:
-                    return obs
+        domain_params = np.array(domain_params, dtype=float)
+
+        #Normalise remaining domain parameters
+        if normalise:
+            domain_params = np.divide(domain_params, self.domain_params_obs_shape-1)
+
+        return domain_params
+
+    def _determine_observation(self, state, norm_obs=False, domain_params=False):
+
+        new_pelican_col,new_pelican_row = self._get_location(self.game.gameBoard, "PELICAN")
+        if new_pelican_col is not None:
+            self.pelican_col = new_pelican_col
+            self.pelican_row = new_pelican_row
+        state['pelican_location'] =  {'col': self.pelican_col, 'row': self.pelican_row}
+
+        new_panther_col, new_panther_row = self._get_location(self.game.gameBoard, "PANTHER")
+        if new_panther_col is not None:
+            self.panther_col = new_panther_col
+            self.panther_row = new_panther_row
+        state['panther_location'] =  {'col': self.panther_col, 'row': self.panther_row}
+        state['madman_status'] = self.game.pelicanPlayer.madmanStatus
+        state['sonobuoy_range'] = self.game.sonobuoy_parameters['active_range']
+
+        pelican_payload = self.game.pelicanPlayer.payload
+        remaining_sbs = len([obj for obj in pelican_payload if obj.type == "SONOBUOY"])
+        remaining_torps = len([obj for obj in pelican_payload if obj.type == "TORPEDO"])
+        state['remaining_sonobuoys'] = remaining_sbs
+        state['deployed_sonobuoys'] = [{'col': b.col, 'row': b.row, 'state': b.state} for b in self.game.globalSonobuoys]
+        state['remaining_torpedoes'] = remaining_torps
+        state['torpedo_hunt_enabled'] = self.game.torpedo_parameters['hunt']
+        state['torpedo_speeds'] = self.game.torpedo_parameters['speed']
+        state['deployed_torpedoes'] = [{'col': t.col, 'row': t.row} for t in self.game.globalTorps]
+
+        obs = []
+        # Current game dimensions - fixed per game
+        obs += [state['map_width'], state['map_height']]
+        # Remaining turns
+        remaining_turns = state['maxTurns'] - state['turn_count']
+        obs.append(remaining_turns)
+        if self.driving_agent == 'pelican':
+            obs = self.__determine_pelican_specific_observations(state, obs)
+        else:
+            obs = self.__determine_panther_specific_observations(state, obs)
+
+        #If flag is true, add domain params to the observation space
+        #Max width, max height and active range are already added above
+        if domain_params:
+            obs += self._determine_remaining_domain_parameters().tolist()
+
+        #To normalise the observations we need to divide them all by the max values
+        #that a state can be - we construct this in obs_maxs
+        if norm_obs:
+            #These if conditions just deal with different circumstances for how to 
+            #build the normalisation constants
+            obs_maxs = np.array(self.observation_max_for_normalisation)
+            if domain_params and not self.domain_params_in_obs:
+                obs_maxs += np.array(self.domain_params_obs_shape)
+            if not domain_params and self.domain_params_in_obs:
+                slice_index = len(self.observation_max_for_normalisation) - \
+                              len(self.domain_params_obs_shape)
+                obs_maxs = obs_maxs[:slice_index]
+
+            #Divide by normalisation constants
+            return np.divide(np.array(obs), obs_maxs-1)
+        else:
+            return np.array(obs, dtype=float)
+
+    #This function returns a numpy array with the full observation. It is modified
+    #according to the member variables self.domain_params_in_obs and self.normalise
+    def get_observation(self, state):
+        return self._determine_observation(state, norm_obs=self.normalise, 
+                                           domain_params=self.domain_params_in_obs)
+
+    #Get numpy array of unmodified observation with no normalisation or domain parameters
+    def get_original_observation(self, state):
+        return self._determine_observation(state, norm_obs=False, domain_params=False)
+
+    #Get numpy array of normalised observation with no domain parameters
+    def get_normalised_observation(self, state):
+        return self._determine_observation(state, norm_obs=True, domain_params=False)
+
+    #Get numpy array of remaining domain parameters - by remaining domain parameters, I
+    #mean the domain parameters that have not yet been added to observation (map_width,
+    #map_height and sonobuoy_range/active_range have already been added)
+    def get_remaining_domain_parameters(self):
+        return self._determine_remaining_domain_parameters(normalise=False)
+
+    #Get numpy array of normalised domain parameters
+    def get_normalised_remaining_domain_parameters(self):
+        return self._determine_remaining_domain_parameters(normalise=True)
