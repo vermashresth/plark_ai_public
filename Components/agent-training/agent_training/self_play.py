@@ -48,13 +48,13 @@ def train_agent(exp_path,model,env,testing_interval,max_steps,model_type,basicda
         steps = steps + testing_interval
         agent_filepath,_,_=   helper.save_model_with_env_settings(exp_path,model,model_type,env,basicdate)
         if early_stopping:
-            victory_count, avg_reward = helper.check_victory(model,env,trials = 10)
+            victory_prop, avg_reward = helper.check_victory(model,env,trials = 10)
             if tb_writer is not None and tb_log_name is not None:
                 tb_steps = steps+previous_steps
                 logger.info("Writing to tensorboard for {} after {} steps".format(tb_log_name, tb_steps))
                 tb_writer.add_scalar('{}_avg_reward'.format(tb_log_name), avg_reward, tb_steps)
-                tb_writer.add_scalar('{}_victory_count'.format(tb_log_name), victory_count, tb_steps)
-            if victory_count > 7:
+                tb_writer.add_scalar('{}_victory_prop'.format(tb_log_name), victory_prop, tb_steps)
+            if victory_prop > 0.7:
                 logger.info("Stopping training early")
                 break #Stopping training as winning
     #Save agent

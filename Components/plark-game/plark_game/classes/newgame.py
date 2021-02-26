@@ -32,7 +32,7 @@ class Newgame():
                 self.trained_agents_filepath = '/data/models/'
                 self.relative_basic_agents_filepath = '../agents/basic'
                 self.import_agents()
-
+                self.is_in_vec_env = kwargs.get('is_in_vec_env', False) 
                 # load the game configurations
                 self.load_configurations(game_config, **kwargs)
 
@@ -420,7 +420,10 @@ class Newgame():
                 return state
 
         def render(self, render_width,render_height,view):
-                return self.pil_ui.update(self._state(view),render_width,render_height)
+            if self.is_in_vec_env:
+                    return np.array(self.pil_ui.update(self._state(view),render_width,render_height))
+            else:
+                    return self.pil_ui.update(self._state(view),render_width,render_height)
 
         def set_pelican_Payload(self):
                 for i in range(self.pelican_parameters['default_torps']):
@@ -561,6 +564,8 @@ class Newgame():
             #logger.info('Playing against:'+agent_filepath)  
             kwargs = {}
             kwargs['driving_agent'] = metadata['agentplayer'] 
+            kwargs['normalise'] = metadata['normalise']
+            kwargs['domain_params_in_obs'] = metadata['domain_params_in_obs']
             if image_based == False:
                 observation = Observation(self,**kwargs)
             self.pelicanAgent = Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
@@ -573,6 +578,8 @@ class Newgame():
             #logger.info('Playing against:'+agent_filepath)  
             kwargs = {}
             kwargs['driving_agent'] = metadata['agentplayer']
+            kwargs['normalise'] = metadata['normalise']
+            kwargs['domain_params_in_obs'] = metadata['domain_params_in_obs']
             if image_based == False:
                 observation = Observation(self,**kwargs)
             self.pantherAgent = Panther_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
@@ -614,6 +621,8 @@ def load_agent(file_path, agent_name,basic_agents_filepath,game,**kwargs):
                                         if kwargs is None:
                                                 kwargs = {}
                                         kwargs['driving_agent'] = metadata['agentplayer'] 
+                                        kwargs['normalise'] = metadata['normalise']
+                                        kwargs['domain_params_in_obs'] = metadata['domain_params_in_obs']
                                         observation = Observation(game,**kwargs)
                                 print("Filepath of the agent being loaded is: " + agent_filepath)
                                 if metadata['agentplayer'] == 'pelican':        
