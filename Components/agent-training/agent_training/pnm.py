@@ -41,13 +41,14 @@ class PNM():
         basepath                        = kwargs.get('basepath', '/data/agents/models')
         
         # Training, evaluation steps, opponents, etc:
-        self.training_steps             = kwargs.get('training_steps', 25) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 1000) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
         
+        self.testing_interval           = kwargs.get('testing_interval', 10) # test exploitability of mixture every n intervals
         self.exploit_steps              = kwargs.get('exploit_steps', 500) # Steps for testing exploitabilty
         self.exploit_trials             = kwargs.get('exploit_trials', 100) # N eval steps for RBBR in exploit step
         
@@ -553,8 +554,7 @@ class PNM():
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
-            testing_interval = 2
-            if self.pnm_iteration  > 0 and self.pnm_iteration  % testing_interval == 0:
+            if self.pnm_iteration  > 0 and self.pnm_iteration  % self.testing_interval == 0:
                 n_rbbrs = 10
                 # Find best pelican (protagonist) against panther (opponent) mixture
                 candidate_pelican_rbbr_fpaths, candidate_pelican_rbbr_win_percentages = self.iter_train_against_mixture(
