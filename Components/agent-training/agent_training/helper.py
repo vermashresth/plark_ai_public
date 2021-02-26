@@ -307,9 +307,11 @@ def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,i
     logger.info("Saving Metadata")
     if isinstance(model.env, VecEnv) or isinstance(model.env, SubprocVecEnv_Torch):
         normalise = model.env.get_attr('normalise')[0]
+        domain_params_in_obs = model.env.get_attr('domain_params_in_obs')[0]
     else:
         normalise = model.env.normalise
-    save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based, normalise)
+        domain_params_in_obs = model.env.domain_params_in_obs
+    save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based, normalise, domain_params_in_obs)
 
     logger.info("Saving Model")
     model_path = os.path.join(model_dir, modellabel + ".zip")
@@ -321,7 +323,7 @@ def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,i
 
 ## Used for generating the json header file which holds details regarding the model.
 ## This will be used when playing the game from the GUI.
-def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_height,render_width,image_based, normalise):
+def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_height,render_width,image_based, normalise, domain_params_in_obs):
     jsondata = {}
     jsondata['algorithm'] =  modeltype
     jsondata['date'] = str(dateandtime)
@@ -330,6 +332,7 @@ def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_heigh
     jsondata['render_width'] = render_width
     jsondata['image_based'] = image_based
     jsondata['normalise'] = normalise
+    jsondata['domain_params_in_obs'] = domain_params_in_obs
     json_path = os.path.join(model_dir, 'metadata.json')
     with open(json_path, 'w') as outfile:
         json.dump(jsondata, outfile)    

@@ -18,10 +18,10 @@ class Observation():
 
         #A boolean flag to indicate whether to add the domain parameters to the
         #observation space
-        self.domain_params_in_obs = kwargs.get('domain_params_in_obs', False)
+        self.domain_params_in_obs = kwargs.get('domain_params_in_obs', True)
 
         #A boolean flag to determine whether to normalise the observations
-        self.normalise = self.kwargs.get('normalise', False)
+        self.normalise = self.kwargs.get('normalise', True)
 
         #self.num_remaining_domain_params = len(self._determine_remaining_domain_parameters())
 
