@@ -23,6 +23,9 @@ class NewgameBase():
         # These are subsequently used throughout the game.
         def __init__(self, game_config, **kwargs):
 
+                # load the game configurations
+                self.load_configurations(game_config, **kwargs)
+
                 # Create required game objects
                 self.create_game_objects()
 
