@@ -308,9 +308,11 @@ def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,i
     logger.info("Saving Metadata")
     if isinstance(model.env, VecEnv) or isinstance(model.env, SubprocVecEnv_Torch):
         normalise = model.env.get_attr('normalise')[0]
+        domain_params_in_obs = model.env.get_attr('domain_params_in_obs')[0]
     else:
         normalise = model.env.normalise
-    save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based, normalise)
+        domain_params_in_obs = model.env.domain_params_in_obs
+    save_model_metadata(model_dir,modeltype,modelplayer,basicdate,render_height,render_width,image_based, normalise, domain_params_in_obs)
 
     logger.info("Saving Model")
     model_path = os.path.join(model_dir, modellabel + ".zip")
@@ -322,7 +324,7 @@ def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,i
 
 ## Used for generating the json header file which holds details regarding the model.
 ## This will be used when playing the game from the GUI.
-def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_height,render_width,image_based, normalise):
+def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_height,render_width,image_based, normalise, domain_params_in_obs):
     jsondata = {}
     jsondata['algorithm'] =  modeltype
     jsondata['date'] = str(dateandtime)
@@ -331,6 +333,7 @@ def save_model_metadata(model_dir,modeltype,modelplayer,dateandtime,render_heigh
     jsondata['render_width'] = render_width
     jsondata['image_based'] = image_based
     jsondata['normalise'] = normalise
+    jsondata['domain_params_in_obs'] = domain_params_in_obs
     json_path = os.path.join(model_dir, 'metadata.json')
     with open(json_path, 'w') as outfile:
         json.dump(jsondata, outfile)    
@@ -602,3 +605,30 @@ def get_fig(df):
     df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind = 'bar', ax = ax2, rot = 0)
     ax2.tick_params(axis = 'x', which = 'both', labelsize = 6)
     ax2.legend(loc = 'upper left', prop = {'size': 8})
+
+def get_fig_with_exploit(df, exploit_df):
+    # exploit_df should have the iteration as the index
+
+    fig, (ax1,ax2) = plt.subplots(nrows=2, ncols=1, figsize=(12, 7.5), sharex=True)
+    cols = ['Pelican_BR_Payoff', 'NE_Payoff', 'Panther_BR_Payoff']
+    df[cols].plot(ax=ax1,fontsize=10, color=['r', 'g', 'b'], linewidth=2)
+
+    # might consider:
+    # unstack and https://stackoverflow.com/questions/40256820/plotting-a-column-containing-lists-using-pandas
+    tmp = exploit_df['panther_median'].reset_index()
+    tmp.columns = ['x','y']
+    tmp.plot(x='x', y='y', ax=ax1, color=['b'], kind='scatter')
+    # exploit_df['pelican_median'].reset_index().plot(ax=ax1, color=['r'], kind='scatter')
+    tmp = exploit_df['pelican_median'].reset_index()
+    tmp.columns = ['x','y']
+    tmp.plot(x='x', y='y', ax=ax1, color=['r'], kind='scatter')
+
+    # ax1.legend(loc='lower right',prop={'size': 12})
+    ax1.legend(loc='lower center',prop={'size': 12})
+    ax1.set_ylabel('Payoff to Pelican', fontsize=14)
+    df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind='bar', ax=ax2, rot=0, color=['r', 'b'])
+    ax2.tick_params(axis='x', which='both', labelsize=9)
+    ax2.legend(loc='upper left',prop={'size': 14})
+    ax2._get_lines.get_next_color()
+    ax2.set_xlabel('PNM Iteration', fontsize=14)
+

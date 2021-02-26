@@ -62,7 +62,8 @@ def load_combatant(
 
     if ".py" in agent_path:
         return load_agent(
-            agent_path, agent_name, basic_agents_path, game, in_tournament=True,**kwargs
+
+            agent_path, agent_name, basic_agents_path, game, in_tournament=False,**kwargs
         )
     else:
 
@@ -90,7 +91,7 @@ def load_combatant(
                         agent_name,
                         basic_agents_path,
                         game,
-                        in_tournament=True,
+                        in_tournament=False,
                         **kwargs
                     )
 
