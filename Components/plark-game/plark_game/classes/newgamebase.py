@@ -25,6 +25,8 @@ class NewgameBase():
         # These are subsequently used throughout the game.
         def __init__(self, game_config, **kwargs):
 
+                self.is_in_vec_env = kwargs.get('is_in_vec_env', False)
+
                 # load the game configurations
                 self.load_configurations(game_config, **kwargs)
 
