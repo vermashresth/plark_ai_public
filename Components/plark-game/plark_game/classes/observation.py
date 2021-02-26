@@ -26,26 +26,26 @@ class Observation():
         #self.num_remaining_domain_params = len(self._determine_remaining_domain_parameters())
 
         #Old max maxs - before Simon's upper bounds
-        self.max_grid_width = 30
-        self.max_grid_height = 30
-        self.max_sonobuoys = 25
-        self.max_turns = 40
-        self.max_pelican_moves = 25
-        self.max_panther_moves = 5
-        self.max_torpedoes = 25
-        self.max_torpedo_turns = 3
-        self.max_torpedo_speed = 3
+        #self.max_grid_width = 30
+        #self.max_grid_height = 30
+        #self.max_sonobuoys = 25
+        #self.max_turns = 40
+        #self.max_pelican_moves = 25
+        #self.max_panther_moves = 5
+        #self.max_torpedoes = 25
+        #self.max_torpedo_turns = 3
+        #self.max_torpedo_speed = 3
 
         #Simon's upper bounds
-        #self.max_grid_width = 35
-        #self.max_grid_height = 35
-        #self.max_sonobuoys = 25
-        #self.max_turns = 50
-        #self.max_pelican_moves = 25
-        #self.max_panther_moves = 3
-        #self.max_torpedoes = 5
-        #self.max_torpedo_turns = 3
-        #self.max_torpedo_speed = 4
+        self.max_grid_width = 35
+        self.max_grid_height = 35
+        self.max_sonobuoys = 25
+        self.max_turns = 50
+        self.max_pelican_moves = 25
+        self.max_panther_moves = 3
+        self.max_torpedoes = 5
+        self.max_torpedo_turns = 3
+        self.max_torpedo_speed = 4
         self.max_torp_search_range = 4
         self.max_sonobuoy_active_range = 4
 
