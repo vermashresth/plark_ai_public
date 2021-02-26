@@ -65,6 +65,7 @@ class PNM():
         self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
                 
         # Video Args:
+        self.video_flag                 = kwargs.get('video_flag', False) # whether to periodically create videos or not
         self.video_steps                = kwargs.get('video_steps', 1000) # N steps used to create videos        
         self.basewidth                  = kwargs.get('basewidth', 2048) # Increase/decrease for high/low resolution videos.
         self.fps                        = kwargs.get('fps', 2) # Videos with lower values are easier to interpret.
@@ -423,7 +424,7 @@ class PNM():
         df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff", "Pelican_supp_size", "Panther_supp_size"]
         df = pd.DataFrame(columns = df_cols)
         # second df for period rigorous exploitability checks
-        exploit_df_cols = ["NE_Payoff", "Pelican_BR_Payoffs", "Panther_BR_Payoffs"]
+        exploit_df_cols = ["iter",  "NE_Payoff", "Pelican_BR_Payoffs", "Panther_BR_Payoffs"]
         exploit_df = pd.DataFrame(columns = exploit_df_cols)
 
         # Train best responses until Nash equilibrium is found or max_iterations are reached
@@ -561,7 +562,7 @@ class PNM():
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
-            testing_interval = 5
+            testing_interval = 2
             if i > 0 and i % testing_interval == 0:
                 n_rbbrs = 10
                 # Find best pelican (protagonist) against panther (opponent) mixture
@@ -578,7 +579,7 @@ class PNM():
                 logger.info("################################################")
                 logger.info('candidate_pelican_rbbr_win_percentages: %s' %  np.round(candidate_pelican_rbbr_win_percentages,2))
                 logger.info("################################################")
-                br_values_pelican = np.round(candidate_pelican_rbbr_win_percentages,2)
+                br_values_pelican = np.round(candidate_pelican_rbbr_win_percentages,2).tolist()
 
                 candidate_panther_rbbr_fpaths, candidate_panther_rbbr_win_percentages = self.iter_train_against_mixture(
                                                 n_rbbrs, # Number of resource bounded best responses
@@ -595,40 +596,50 @@ class PNM():
                 logger.info("################################################")
                 br_values_panther = [1-p for p in np.round(candidate_panther_rbbr_win_percentages,2)]
 
-                values = dict(zip(exploit_df_cols, [value_to_pelican, 
+                values = dict(zip(exploit_df_cols, [i,
+                                                    value_to_pelican, 
                                                     br_values_pelican,
                                                     br_values_panther]))
                 exploit_df = exploit_df.append(values, ignore_index = True)
+
+                # add medians
+                exploit_df['pelican_median'] = exploit_df['Pelican_BR_Payoffs'].apply(np.median)
+                exploit_df['panther_median'] = exploit_df['Panther_BR_Payoffs'].apply(np.median)
+
                 # Write to csv file
                 df_path =  os.path.join(self.exp_path, 'exploit_iter_%02d.csv' % i)
-                exploit_df.to_csv(df_path, index = False)
-                # helper.get_fig(df)
-                # fig_path = os.path.join(self.exp_path, 'values_iter_%02d.pdf' % i)
-                # plt.savefig(fig_path)
+
+                tmp_df = exploit_df.set_index('iter')
+                tmp_df.to_csv(df_path, index = False)
+
+                helper.get_fig_with_exploit(df, tmp_df)
+                fig_path = os.path.join(self.exp_path, 'values_with_exploit_iter_%02d.pdf' % i)
+                plt.savefig(fig_path)
                 print("==========================================")
                 print("WRITTEN EXPLOIT DF TO CSV: %s" % df_path)
                 print("==========================================")
 
-                # occasionally ouput useful things along the way
-                # Make videos
-                verbose = False
-                video_path =  os.path.join(self.exp_path, 'pelican_pnm_iter_%02d.mp4' % i)
-                basewidth,hsize = helper.make_video_VEC_ENV(self.pelican_model, 
-                                                            self.pelican_env, 
-                                                            video_path,
-                                                            fps=self.fps,
-                                                            basewidth=self.basewidth,
-                                                            n_steps=self.video_steps,
-                                                            verbose=verbose)
-                                                            
-                video_path =  os.path.join(self.exp_path, 'panther_pnm_iter_%02d.mp4' % i)
-                basewidth,hsize = helper.make_video_VEC_ENV(self.panther_model, 
-                                                            self.panther_env, 
-                                                            video_path,
-                                                            fps=self.fps,
-                                                            basewidth=self.basewidth,
-                                                            n_steps=self.video_steps,
-                                                            verbose=verbose)
+                if self.video_flag:
+                    # occasionally ouput useful things along the way
+                    # Make videos
+                    verbose = False
+                    video_path =  os.path.join(self.exp_path, 'pelican_pnm_iter_%02d.mp4' % i)
+                    basewidth,hsize = helper.make_video_VEC_ENV(self.pelican_model, 
+                                                                self.pelican_env, 
+                                                                video_path,
+                                                                fps=self.fps,
+                                                                basewidth=self.basewidth,
+                                                                n_steps=self.video_steps,
+                                                                verbose=verbose)
+                                                                
+                    video_path =  os.path.join(self.exp_path, 'panther_pnm_iter_%02d.mp4' % i)
+                    basewidth,hsize = helper.make_video_VEC_ENV(self.panther_model, 
+                                                                self.panther_env, 
+                                                                video_path,
+                                                                fps=self.fps,
+                                                                basewidth=self.basewidth,
+                                                                n_steps=self.video_steps,
+                                                                verbose=verbose)
 
 
         logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
