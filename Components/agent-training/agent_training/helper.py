@@ -604,3 +604,30 @@ def get_fig(df):
     df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind = 'bar', ax = ax2, rot = 0)
     ax2.tick_params(axis = 'x', which = 'both', labelsize = 6)
     ax2.legend(loc = 'upper left', prop = {'size': 8})
+
+def get_fig_with_exploit(df, exploit_df):
+    # exploit_df should have the iteration as the index
+
+    fig, (ax1,ax2) = plt.subplots(nrows=2, ncols=1, figsize=(12, 7.5), sharex=True)
+    cols = ['Pelican_BR_Payoff', 'NE_Payoff', 'Panther_BR_Payoff']
+    df[cols].plot(ax=ax1,fontsize=10, color=['r', 'g', 'b'], linewidth=2)
+
+    # might consider:
+    # unstack and https://stackoverflow.com/questions/40256820/plotting-a-column-containing-lists-using-pandas
+    tmp = exploit_df['panther_median'].reset_index()
+    tmp.columns = ['x','y']
+    tmp.plot(x='x', y='y', ax=ax1, color=['b'], kind='scatter')
+    # exploit_df['pelican_median'].reset_index().plot(ax=ax1, color=['r'], kind='scatter')
+    tmp = exploit_df['pelican_median'].reset_index()
+    tmp.columns = ['x','y']
+    tmp.plot(x='x', y='y', ax=ax1, color=['r'], kind='scatter')
+
+    # ax1.legend(loc='lower right',prop={'size': 12})
+    ax1.legend(loc='lower center',prop={'size': 12})
+    ax1.set_ylabel('Payoff to Pelican', fontsize=14)
+    df[['Pelican_supp_size', 'Panther_supp_size']].plot(kind='bar', ax=ax2, rot=0, color=['r', 'b'])
+    ax2.tick_params(axis='x', which='both', labelsize=9)
+    ax2.legend(loc='upper left',prop={'size': 14})
+    ax2._get_lines.get_next_color()
+    ax2.set_xlabel('PNM Iteration', fontsize=14)
+
