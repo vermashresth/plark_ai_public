@@ -41,14 +41,15 @@ class PNM():
         basepath                        = kwargs.get('basepath', '/data/agents/models')
         
         # Training, evaluation steps, opponents, etc:
-        self.training_steps             = kwargs.get('training_steps', 250) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 25) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
 
-        self.exploit_steps              = kwargs.get('exploit_steps', 0.001) # Steps for testing exploitabilty
+        self.exploit_steps              = kwargs.get('exploit_steps', 500) # Steps for testing exploitabilty
+        self.exploit_trials             = kwargs.get('exploit_trials', 100) # N eval steps for RBBR in exploit step
         
         # Model training params:
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
@@ -187,24 +188,24 @@ class PNM():
         
         for _ in range(n_rbbrs):
         
-            model = self.bootstrap(protagonist_filepaths, env,protagonist_mixture)
+            model = self.bootstrap(protagonist_filepaths, env, protagonist_mixture)
             
-            filepaths.append(self.train_agent_against_mixture(driving_agent,
-                                                        exp_path,
-                                                        model,
-                                                        env,
-                                                        opponent_policy_fpaths,
-                                                        opponent_mixture,
-                                                        self.exploit_steps))
+            filepaths.append(self.train_agent_against_mixture(exp_path,
+                                                                driving_agent,
+                                                                model,
+                                                                env,
+                                                                opponent_policy_fpaths,
+                                                                opponent_mixture,
+                                                                self.exploit_steps))
         
-            win_percentages.append(self.eval_agent_against_mixture(driving_agent,
-                                                                   exp_path,
-                                                                   model,
-                                                                   env,
-                                                                   opponent_policy_fpaths,
-                                                                   opponent_mixture,
-                                                                   self.payoff_matrix_trials)) 
-        
+            win_percentages.append(self.eval_agent_against_mixture(exp_path,
+                                                                    driving_agent,
+                                                                    model,
+                                                                    env,
+                                                                    opponent_policy_fpaths,
+                                                                    opponent_mixture,
+                                                                    self.exploit_trials))
+
         return filepaths, win_percentages
             
 
@@ -285,7 +286,7 @@ class PNM():
                 victories.append(victory_prop)
                 avg_rewards.append(avg_reward)
 
-        return mean(victories)#, mean(avg_rewards)
+        return np.mean(victories)#, np.mean(avg_rewards)
             
                 
     def train_agent_against_mixture(self,
@@ -417,9 +418,13 @@ class PNM():
         value_to_pelican = 0.
         mixture_pelicans = np.array([1.])
         mixture_panthers = np.array([1.])
-        # Create DataFrame for plotting purposes
+
+        # Create DataFrames for plotting purposes
         df_cols = ["NE_Payoff", "Pelican_BR_Payoff", "Panther_BR_Payoff", "Pelican_supp_size", "Panther_supp_size"]
         df = pd.DataFrame(columns = df_cols)
+        # second df for period rigorous exploitability checks
+        exploit_df_cols = ["NE_Payoff", "Pelican_BR_Payoffs", "Panther_BR_Payoffs"]
+        exploit_df = pd.DataFrame(columns = exploit_df_cols)
 
         # Train best responses until Nash equilibrium is found or max_iterations are reached
         logger.info('Parallel Nash Memory (PNM)')
@@ -491,7 +496,7 @@ class PNM():
                 fig_path = os.path.join(self.exp_path, 'values_iter_%02d.pdf' % i)
                 plt.savefig(fig_path)
                 print("==========================================")
-                print("WRITTEN DF TO CSV: %s" % df_path)
+                print("WRITTEN VALUES DF TO CSV: %s" % df_path)
                 print("==========================================")
 
                 # here value_to_pelican is from the last time the subgame was solved
@@ -528,7 +533,7 @@ class PNM():
             # Train from skratch or retrain an existing model for pelican
             logger.info('Training pelican')
             
-            self.pelican_model = bootstrap(self.pelicans, self.pelican_env, mixture_pelicans)
+            self.pelican_model = self.bootstrap(self.pelicans, self.pelican_env, mixture_pelicans)
                 
             pelican_agent_filepath = self.train_agent_against_mixture('pelican',
                                                                       self.pelicans_tmp_exp_path,
@@ -544,7 +549,7 @@ class PNM():
             # Train from scratch or retrain an existing model for panther
             logger.info('Training panther')
             
-            self.panther_model = bootstrap(self.panthers, self.panther_env, mixture_panthers)
+            self.panther_model = self.bootstrap(self.panthers, self.panther_env, mixture_panthers)
             
             panther_agent_filepath = self.train_agent_against_mixture('panther',
                                                                      self.panthers_tmp_exp_path,
@@ -557,8 +562,53 @@ class PNM():
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
             testing_interval = 5
-            # if i % testing_interval == 0:
-            if True:
+            if i > 0 and i % testing_interval == 0:
+                n_rbbrs = 10
+                # Find best pelican (protagonist) against panther (opponent) mixture
+                candidate_pelican_rbbr_fpaths, candidate_pelican_rbbr_win_percentages = self.iter_train_against_mixture(
+                                                n_rbbrs, # Number of resource bounded best responses
+                                                self.pelicans_tmp_exp_path,
+                                                self.pelican_model, # driving_agent, # agent that we train
+                                                self.pelican_env, # env, # Can either be a single env or subvecproc
+                                                self.pelicans, # Filepaths to existing models
+                                                mixture_pelicans, # mixture for bootstrapping
+                                                self.panthers, # opponent_policy_fpaths, # policies of opponent of driving agent
+                                                mixture_panthers) # opponent_mixture)
+
+                logger.info("################################################")
+                logger.info('candidate_pelican_rbbr_win_percentages: %s' %  np.round(candidate_pelican_rbbr_win_percentages,2))
+                logger.info("################################################")
+                br_values_pelican = np.round(candidate_pelican_rbbr_win_percentages,2)
+
+                candidate_panther_rbbr_fpaths, candidate_panther_rbbr_win_percentages = self.iter_train_against_mixture(
+                                                n_rbbrs, # Number of resource bounded best responses
+                                                self.panthers_tmp_exp_path,
+                                                self.panther_model, # driving_agent, # agent that we train
+                                                self.panther_env, # env, # Can either be a single env or subvecproc
+                                                self.panthers, # Filepaths to existing models
+                                                mixture_panthers, # mixture for bootstrapping
+                                                self.pelicans, # opponent_policy_fpaths, # policies of opponent of driving agent
+                                                mixture_pelicans) # opponent_mixture)
+
+                logger.info("################################################")
+                logger.info('candidate_panther_rbbr_win_percentages: %s' % np.round(candidate_panther_rbbr_win_percentages,2))
+                logger.info("################################################")
+                br_values_panther = [1-p for p in np.round(candidate_panther_rbbr_win_percentages,2)]
+
+                values = dict(zip(exploit_df_cols, [value_to_pelican, 
+                                                    br_values_pelican,
+                                                    br_values_panther]))
+                exploit_df = exploit_df.append(values, ignore_index = True)
+                # Write to csv file
+                df_path =  os.path.join(self.exp_path, 'exploit_iter_%02d.csv' % i)
+                exploit_df.to_csv(df_path, index = False)
+                # helper.get_fig(df)
+                # fig_path = os.path.join(self.exp_path, 'values_iter_%02d.pdf' % i)
+                # plt.savefig(fig_path)
+                print("==========================================")
+                print("WRITTEN EXPLOIT DF TO CSV: %s" % df_path)
+                print("==========================================")
+
                 # occasionally ouput useful things along the way
                 # Make videos
                 verbose = False
