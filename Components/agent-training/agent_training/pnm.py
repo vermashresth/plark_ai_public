@@ -66,9 +66,9 @@ class PNM():
         self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
                 
         # Video Args:
-        self.video_flag                 = kwargs.get('video_flag', False) # whether to periodically create videos or not
+        self.video_flag                 = kwargs.get('video_flag', True) # whether to periodically create videos or not
         self.video_steps                = kwargs.get('video_steps', 100) # N steps used to create videos        
-        self.basewidth                  = kwargs.get('basewidth', 2048) # Increase/decrease for high/low resolution videos.
+        self.basewidth                  = kwargs.get('basewidth', 1024) # Increase/decrease for high/low resolution videos.
         self.fps                        = kwargs.get('fps', 2) # Videos with lower values are easier to interpret.
 
         # Path to experiment folder
@@ -197,6 +197,7 @@ class PNM():
                                                                 env,
                                                                 opponent_policy_fpaths,
                                                                 opponent_mixture,
+                                                                self.exploit_steps,
                                                                 filepath_addon='_exploitability_model_%d' % i))
         
             win_percentages.append(self.eval_agent_against_mixture( driving_agent,
@@ -205,6 +206,7 @@ class PNM():
                                                                     env,
                                                                     opponent_policy_fpaths,
                                                                     opponent_mixture,
+                                                                    self.exploit_steps,
                                                                     self.exploit_trials))
 
         return filepaths, win_percentages
@@ -297,6 +299,7 @@ class PNM():
                                     env, # Can either be a single env or subvecproc
                                     opponent_policy_fpaths, # policies of opponent of driving agent
                                     opponent_mixture,
+                                    training_steps,
                                     filepath_addon=''): # mixture of opponent of driving agent
                                     
         ################################################################
@@ -335,7 +338,7 @@ class PNM():
                 if i > 0 and (i + 1) % self.num_parallel_envs == 0:
                     logger.info("Beginning parallel training for {} steps".format(self.training_steps))
                     model.set_env(env)
-                    model.learn(self.training_steps)
+                    model.learn(training_steps)
 
         # Otherwise we sample different opponents and we train against each of them separately
         else:
@@ -565,7 +568,8 @@ class PNM():
                                                 self.pelicans, # Filepaths to existing models
                                                 mixture_pelicans, # mixture for bootstrapping
                                                 self.panthers, # opponent_policy_fpaths, # policies of opponent of driving agent
-                                                mixture_panthers) # opponent_mixture)
+                                                mixture_panthers, # opponent_mixture)
+                                                self.training_steps) # opponent_mixture)
 
                 logger.info("################################################")
                 logger.info('candidate_pelican_rbbr_win_percentages: %s' %  np.round(candidate_pelican_rbbr_win_percentages,2))
@@ -580,7 +584,8 @@ class PNM():
                                                 self.panthers, # Filepaths to existing models
                                                 mixture_panthers, # mixture for bootstrapping
                                                 self.pelicans, # opponent_policy_fpaths, # policies of opponent of driving agent
-                                                mixture_pelicans) # opponent_mixture)
+                                                mixture_pelicans, # opponent_mixture)
+                                                self.training_steps) # opponent_mixture)
 
                 logger.info("################################################")
                 logger.info('candidate_panther_rbbr_win_percentages: %s' % np.round(candidate_panther_rbbr_win_percentages,2))
