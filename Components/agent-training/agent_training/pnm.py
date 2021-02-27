@@ -67,7 +67,7 @@ class PNM():
                 
         # Video Args:
         self.video_flag                 = kwargs.get('video_flag', False) # whether to periodically create videos or not
-        self.video_steps                = kwargs.get('video_steps', 1000) # N steps used to create videos        
+        self.video_steps                = kwargs.get('video_steps', 100) # N steps used to create videos        
         self.basewidth                  = kwargs.get('basewidth', 2048) # Increase/decrease for high/low resolution videos.
         self.fps                        = kwargs.get('fps', 2) # Videos with lower values are easier to interpret.
 
@@ -187,7 +187,7 @@ class PNM():
         
         win_percentages = []
         filepaths = []
-        for _ in range(n_rbbrs):
+        for i in range(n_rbbrs):
         
             model = self.bootstrap(protagonist_filepaths, env, protagonist_mixture)
             
@@ -197,7 +197,7 @@ class PNM():
                                                                 env,
                                                                 opponent_policy_fpaths,
                                                                 opponent_mixture,
-                                                                filepath_addon='_exploitability'))
+                                                                filepath_addon='_exploitability_model_%d' % i))
         
             win_percentages.append(self.eval_agent_against_mixture( driving_agent,
                                                                     exp_path,
