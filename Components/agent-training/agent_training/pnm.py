@@ -41,7 +41,7 @@ class PNM():
         basepath                        = kwargs.get('basepath', '/data/agents/models')
         
         # Training, evaluation steps, opponents, etc:
-        self.training_steps             = kwargs.get('training_steps', 1000) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 25) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
@@ -587,7 +587,7 @@ class PNM():
                 logger.info("################################################")
                 br_values_panther = [1-p for p in np.round(candidate_panther_rbbr_win_percentages,2)]
 
-                values = dict(zip(exploit_df_cols, [i,
+                values = dict(zip(exploit_df_cols, [self.pnm_iteration,
                                                     value_to_pelican, 
                                                     br_values_pelican,
                                                     br_values_panther]))
