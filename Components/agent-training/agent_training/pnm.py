@@ -48,10 +48,11 @@ class PNM():
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
         
-        self.testing_interval           = kwargs.get('testing_interval', 10) # test exploitability of mixture every n intervals
-        self.exploit_steps              = kwargs.get('exploit_steps', 500) # Steps for testing exploitabilty
-        self.exploit_trials             = kwargs.get('exploit_trials', 100) # N eval steps for RBBR in exploit step
-        
+        self.testing_interval           = kwargs.get('testing_interval', 5) # test exploitability of mixture every n intervals
+        self.exploit_steps              = kwargs.get('exploit_steps', 100) # Steps for testing exploitabilty
+        self.exploit_trials             = kwargs.get('exploit_trials', 50) # N eval steps for RBBR in exploit step
+        self.exploit_n_rbbrs            = kwargs.get('exploit_n_rbbrs', 5) # N different RBBRs combputed 
+
         # Model training params:
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
         self.num_parallel_envs          = kwargs.get('num_parallel_envs', 7) # Used determine envs in VecEnv
@@ -555,10 +556,9 @@ class PNM():
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
             if self.pnm_iteration  > 0 and self.pnm_iteration  % self.testing_interval == 0:
-                n_rbbrs = 10
                 # Find best pelican (protagonist) against panther (opponent) mixture
                 candidate_pelican_rbbr_fpaths, candidate_pelican_rbbr_win_percentages = self.iter_train_against_mixture(
-                                                n_rbbrs, # Number of resource bounded best responses
+                                                self.exploit_n_rbbrs, # Number of resource bounded best responses
                                                 self.pelicans_tmp_exp_path,
                                                 self.pelican_model, # driving_agent, # agent that we train
                                                 self.pelican_env, # env, # Can either be a single env or subvecproc
@@ -573,7 +573,7 @@ class PNM():
                 br_values_pelican = np.round(candidate_pelican_rbbr_win_percentages,2).tolist()
 
                 candidate_panther_rbbr_fpaths, candidate_panther_rbbr_win_percentages = self.iter_train_against_mixture(
-                                                n_rbbrs, # Number of resource bounded best responses
+                                                self.exploit_n_rbbrs, # Number of resource bounded best responses
                                                 self.panthers_tmp_exp_path,
                                                 self.panther_model, # driving_agent, # agent that we train
                                                 self.panther_env, # env, # Can either be a single env or subvecproc
@@ -601,7 +601,7 @@ class PNM():
                 df_path =  os.path.join(self.exp_path, 'exploit_iter_%02d.csv' % self.pnm_iteration)
 
                 tmp_df = exploit_df.set_index('iter')
-                tmp_df.to_csv(df_path, index = False)
+                tmp_df.to_csv(df_path, index = True)
 
                 helper.get_fig_with_exploit(df, tmp_df)
                 fig_path = os.path.join(self.exp_path, 'values_with_exploit_iter_%02d.pdf' % self.pnm_iteration)
