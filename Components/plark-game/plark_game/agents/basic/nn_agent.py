@@ -150,11 +150,12 @@ class NNAgent(Agent):
                 weights += params.flatten().tolist()
         return weights
 
-    def _save_metadata(self, dir_path, player_type, obs_normalise):
+    def _save_metadata(self, dir_path, player_type, obs_normalise, domain_params_in_obs):
         metadata = {}
 
         metadata['playertype'] = player_type
         metadata['normalise'] = obs_normalise
+        metadata['domain_params_in_obs'] = domain_params_in_obs
 
         metadata['num_inputs'] = self.num_inputs
         metadata['num_hidden_layers'] = self.num_hidden_layers
@@ -173,7 +174,7 @@ class NNAgent(Agent):
             csv_writer = csv.writer(outfile)
             csv_writer.writerow(self.get_weights())
                 
-    def _save_agent_to_file(self, player_type, obs_normalise):
+    def _save_agent_to_file(self, player_type, obs_normalise, domain_params_in_obs):
 
         #Construct full directory path
         date_time = str(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
@@ -185,7 +186,7 @@ class NNAgent(Agent):
         os.chmod(dir_path, 0o777)
 
         #Save metadata
-        self._save_metadata(dir_path, player_type, obs_normalise)
+        self._save_metadata(dir_path, player_type, obs_normalise, domain_params_in_obs)
 
         #Save genotype
         self._save_genotype(dir_path) 
