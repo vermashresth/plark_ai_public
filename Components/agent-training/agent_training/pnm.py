@@ -570,8 +570,7 @@ class PNM():
                                                 self.pelicans, # Filepaths to existing models
                                                 mixture_pelicans, # mixture for bootstrapping
                                                 self.panthers, # opponent_policy_fpaths, # policies of opponent of driving agent
-                                                mixture_panthers, # opponent_mixture)
-                                                self.training_steps) # opponent_mixture)
+                                                mixture_panthers) # opponent_mixture)
 
                 logger.info("################################################")
                 logger.info('candidate_pelican_rbbr_win_percentages: %s' %  np.round(candidate_pelican_rbbr_win_percentages,2))
@@ -586,8 +585,7 @@ class PNM():
                                                 self.panthers, # Filepaths to existing models
                                                 mixture_panthers, # mixture for bootstrapping
                                                 self.pelicans, # opponent_policy_fpaths, # policies of opponent of driving agent
-                                                mixture_pelicans, # opponent_mixture)
-                                                self.training_steps) # opponent_mixture)
+                                                mixture_pelicans) # opponent_mixture)
 
                 logger.info("################################################")
                 logger.info('candidate_panther_rbbr_win_percentages: %s' % np.round(candidate_panther_rbbr_win_percentages,2))
