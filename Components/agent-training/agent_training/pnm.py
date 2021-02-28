@@ -639,9 +639,12 @@ class PNM():
 
 
         # Saving final mixture and corresponding agents
+        logger.info("################################################")
+        logger.info("Saving final pelican mixtures and agents:")
         support_pelicans = np.nonzero(mixture_pelicans)[0]
         mixture_pelicans = mixture_pelicans[support_pelicans]
         np.save(self.exp_path + '/final_mixture_pelicans.npy', mixture_pelicans)
+        logger.info("Final pelican mixture saved to: %s" % self.exp_path + '/final_mixture_pelicans.npy')
         for i, idx in enumerate(mixture_pelicans):
             self.pelican_model = helper.loadAgent(glob.glob(self.pelicans[i]+ "/*.zip")[0], self.model_type)
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.pelicans_tmp_exp_path,
@@ -649,9 +652,11 @@ class PNM():
                                                                       self.model_type,
                                                                       self.pelican_env,
                                                                       self.basicdate + "_ps_" + str(i))
+            logger.info("Saving  pelican %d to %s" % (i, agent_filepath))
         support_panthers = np.nonzero(mixture_panthers)[0]
         mixture_panthers = mixture_panthers[support_panthers]
         np.save(self.exp_path + '/final_mixture_panthers.npy', mixture_panthers)
+        logger.info("Final panther mixture saved to: %s" % self.exp_path + '/final_mixture_panthers.npy')
         for i, idx in enumerate(mixture_panthers):
             self.panther_model = helper.loadAgent(glob.glob(self.panthers[i]+ "/*.zip")[0], self.model_type)
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.panthers_tmp_exp_path,
@@ -660,6 +665,7 @@ class PNM():
                                                                       self.panther_env,
                                                                       self.basicdate + "_ps_" + str(i))
 
+            logger.info("Saving  panther %d to %s" % (i, agent_filepath))
 if __name__ == '__main__':
 
     #examples_dir = '/data/examples'
