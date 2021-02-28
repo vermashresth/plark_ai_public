@@ -207,7 +207,6 @@ class PNM():
                                                                     env,
                                                                     opponent_policy_fpaths,
                                                                     opponent_mixture,
-                                                                    self.exploit_steps,
                                                                     self.exploit_trials))
 
         return filepaths, win_percentages
