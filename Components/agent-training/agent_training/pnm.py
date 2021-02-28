@@ -646,7 +646,7 @@ class PNM():
         mixture_pelicans = mixture_pelicans[support_pelicans]
         np.save(self.exp_path + '/mixture_pelicans.npy', mixture_pelicans)
         for i, idx in enumerate(mixture_pelicans):
-            self.pelican_model = helper.loadAgent(self.pelicans[i], self.model_type)
+            self.pelican_model = helper.loadAgent(glob.glob(self.pelicans[i]+ "/*.zip")[0], self.model_type)
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.pelicans_tmp_exp_path,
                                                                       self.pelican_model,
                                                                       self.model_type,
@@ -656,7 +656,7 @@ class PNM():
         mixture_panthers = mixture_panthers[support_panthers]
         np.save(self.exp_path + '/mixture_panthers.npy', mixture_panthers)
         for i, idx in enumerate(mixture_panthers):
-            self.panther_model = helper.loadAgent(self.panthers[i], self.model_type)
+            self.panther_model = helper.loadAgent(glob.glob(self.panthers[i]+ "/*.zip")[0], self.model_type)
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.panthers_tmp_exp_path,
                                                                       self.panther_model,
                                                                       self.model_type,
