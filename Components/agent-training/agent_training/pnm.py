@@ -638,13 +638,10 @@ class PNM():
                                                                 verbose=verbose)
 
 
-        #######################################################################
-        # THIS NEXT BIT DOESN'T WORK:
-
         # Saving final mixture and corresponding agents
         support_pelicans = np.nonzero(mixture_pelicans)[0]
         mixture_pelicans = mixture_pelicans[support_pelicans]
-        np.save(self.exp_path + '/mixture_pelicans.npy', mixture_pelicans)
+        np.save(self.exp_path + '/final_mixture_pelicans.npy', mixture_pelicans)
         for i, idx in enumerate(mixture_pelicans):
             self.pelican_model = helper.loadAgent(glob.glob(self.pelicans[i]+ "/*.zip")[0], self.model_type)
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.pelicans_tmp_exp_path,
@@ -654,7 +651,7 @@ class PNM():
                                                                       self.basicdate + "_ps_" + str(i))
         support_panthers = np.nonzero(mixture_panthers)[0]
         mixture_panthers = mixture_panthers[support_panthers]
-        np.save(self.exp_path + '/mixture_panthers.npy', mixture_panthers)
+        np.save(self.exp_path + '/final_mixture_panthers.npy', mixture_panthers)
         for i, idx in enumerate(mixture_panthers):
             self.panther_model = helper.loadAgent(glob.glob(self.panthers[i]+ "/*.zip")[0], self.model_type)
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.panthers_tmp_exp_path,
