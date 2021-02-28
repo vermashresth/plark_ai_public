@@ -41,15 +41,15 @@ class PNM():
         basepath                        = kwargs.get('basepath', '/data/agents/models')
         
         # Training, evaluation steps, opponents, etc:
-        self.training_steps             = kwargs.get('training_steps', 25) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 500) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
         
-        self.testing_interval           = kwargs.get('testing_interval', 5) # test exploitability of mixture every n intervals
-        self.exploit_steps              = kwargs.get('exploit_steps', 100) # Steps for testing exploitabilty
+        self.testing_interval           = kwargs.get('testing_interval', 10) # test exploitability of mixture every n intervals
+        self.exploit_steps              = kwargs.get('exploit_steps', 10000) # Steps for testing exploitabilty
         self.exploit_trials             = kwargs.get('exploit_trials', 50) # N eval steps for RBBR in exploit step
         self.exploit_n_rbbrs            = kwargs.get('exploit_n_rbbrs', 5) # N different RBBRs combputed 
 
@@ -539,7 +539,8 @@ class PNM():
                                                                       self.pelican_model,
                                                                       self.pelican_env,
                                                                       self.panthers,
-                                                                      mixture_panthers)
+                                                                      mixture_panthers,
+                                                                      self.training_steps)
 
             
             
@@ -554,7 +555,8 @@ class PNM():
                                                                      self.panther_model,
                                                                      self.panther_env,
                                                                      self.pelicans,
-                                                                     mixture_pelicans)
+                                                                     mixture_pelicans,
+                                                                     self.training_steps)
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
