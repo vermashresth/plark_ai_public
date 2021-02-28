@@ -41,16 +41,18 @@ class PNM():
         basepath                        = kwargs.get('basepath', '/data/agents/models')
         
         # Training, evaluation steps, opponents, etc:
-        self.training_steps             = kwargs.get('training_steps', 25) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 500) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
         self.max_pnm_iterations         = kwargs.get('max_pnm_iterations', 100) # N PNM iterations
         self.stopping_eps               = kwargs.get('stopping_eps', 0.001) # required quality of RB-NE
         
-        self.exploit_steps              = kwargs.get('exploit_steps', 500) # Steps for testing exploitabilty
-        self.exploit_trials             = kwargs.get('exploit_trials', 100) # N eval steps for RBBR in exploit step
-        
+        self.testing_interval           = kwargs.get('testing_interval', 10) # test exploitability of mixture every n intervals
+        self.exploit_steps              = kwargs.get('exploit_steps', 10000) # Steps for testing exploitabilty
+        self.exploit_trials             = kwargs.get('exploit_trials', 50) # N eval steps for RBBR in exploit step
+        self.exploit_n_rbbrs            = kwargs.get('exploit_n_rbbrs', 5) # N different RBBRs combputed 
+
         # Model training params:
         normalise                       = kwargs.get('normalise', True) # Normalise observation vector.
         self.num_parallel_envs          = kwargs.get('num_parallel_envs', 7) # Used determine envs in VecEnv
@@ -65,9 +67,9 @@ class PNM():
         self.max_illegal_moves_per_turn = kwargs.get('max_illegal_moves_per_turn', 2)
                 
         # Video Args:
-        self.video_flag                 = kwargs.get('video_flag', False) # whether to periodically create videos or not
-        self.video_steps                = kwargs.get('video_steps', 1000) # N steps used to create videos        
-        self.basewidth                  = kwargs.get('basewidth', 2048) # Increase/decrease for high/low resolution videos.
+        self.video_flag                 = kwargs.get('video_flag', True) # whether to periodically create videos or not
+        self.video_steps                = kwargs.get('video_steps', 100) # N steps used to create videos        
+        self.basewidth                  = kwargs.get('basewidth', 1024) # Increase/decrease for high/low resolution videos.
         self.fps                        = kwargs.get('fps', 2) # Videos with lower values are easier to interpret.
 
         # Path to experiment folder
@@ -186,7 +188,7 @@ class PNM():
         
         win_percentages = []
         filepaths = []
-        for _ in range(n_rbbrs):
+        for i in range(n_rbbrs):
         
             model = self.bootstrap(protagonist_filepaths, env, protagonist_mixture)
             
@@ -196,7 +198,8 @@ class PNM():
                                                                 env,
                                                                 opponent_policy_fpaths,
                                                                 opponent_mixture,
-                                                                filepath_addon='_exploitability'))
+                                                                self.exploit_steps,
+                                                                filepath_addon='_exploitability_model_%d' % i))
         
             win_percentages.append(self.eval_agent_against_mixture( driving_agent,
                                                                     exp_path,
@@ -296,6 +299,7 @@ class PNM():
                                     env, # Can either be a single env or subvecproc
                                     opponent_policy_fpaths, # policies of opponent of driving agent
                                     opponent_mixture,
+                                    training_steps,
                                     filepath_addon=''): # mixture of opponent of driving agent
                                     
         ################################################################
@@ -334,7 +338,7 @@ class PNM():
                 if i > 0 and (i + 1) % self.num_parallel_envs == 0:
                     logger.info("Beginning parallel training for {} steps".format(self.training_steps))
                     model.set_env(env)
-                    model.learn(self.training_steps)
+                    model.learn(training_steps)
 
         # Otherwise we sample different opponents and we train against each of them separately
         else:
@@ -534,7 +538,8 @@ class PNM():
                                                                       self.pelican_model,
                                                                       self.pelican_env,
                                                                       self.panthers,
-                                                                      mixture_panthers)
+                                                                      mixture_panthers,
+                                                                      self.training_steps)
 
             
             
@@ -549,16 +554,15 @@ class PNM():
                                                                      self.panther_model,
                                                                      self.panther_env,
                                                                      self.pelicans,
-                                                                     mixture_pelicans)
+                                                                     mixture_pelicans,
+                                                                     self.training_steps)
 
             logger.info("PNM iteration lasted: %d seconds" % (time.time() - start))
 
-            testing_interval = 2
-            if self.pnm_iteration  > 0 and self.pnm_iteration  % testing_interval == 0:
-                n_rbbrs = 10
+            if self.pnm_iteration  > 0 and self.pnm_iteration  % self.testing_interval == 0:
                 # Find best pelican (protagonist) against panther (opponent) mixture
                 candidate_pelican_rbbr_fpaths, candidate_pelican_rbbr_win_percentages = self.iter_train_against_mixture(
-                                                n_rbbrs, # Number of resource bounded best responses
+                                                self.exploit_n_rbbrs, # Number of resource bounded best responses
                                                 self.pelicans_tmp_exp_path,
                                                 self.pelican_model, # driving_agent, # agent that we train
                                                 self.pelican_env, # env, # Can either be a single env or subvecproc
@@ -573,7 +577,7 @@ class PNM():
                 br_values_pelican = np.round(candidate_pelican_rbbr_win_percentages,2).tolist()
 
                 candidate_panther_rbbr_fpaths, candidate_panther_rbbr_win_percentages = self.iter_train_against_mixture(
-                                                n_rbbrs, # Number of resource bounded best responses
+                                                self.exploit_n_rbbrs, # Number of resource bounded best responses
                                                 self.panthers_tmp_exp_path,
                                                 self.panther_model, # driving_agent, # agent that we train
                                                 self.panther_env, # env, # Can either be a single env or subvecproc
@@ -587,7 +591,7 @@ class PNM():
                 logger.info("################################################")
                 br_values_panther = [1-p for p in np.round(candidate_panther_rbbr_win_percentages,2)]
 
-                values = dict(zip(exploit_df_cols, [i,
+                values = dict(zip(exploit_df_cols, [self.pnm_iteration,
                                                     value_to_pelican, 
                                                     br_values_pelican,
                                                     br_values_panther]))
@@ -601,7 +605,7 @@ class PNM():
                 df_path =  os.path.join(self.exp_path, 'exploit_iter_%02d.csv' % self.pnm_iteration)
 
                 tmp_df = exploit_df.set_index('iter')
-                tmp_df.to_csv(df_path, index = False)
+                tmp_df.to_csv(df_path, index = True)
 
                 helper.get_fig_with_exploit(df, tmp_df)
                 fig_path = os.path.join(self.exp_path, 'values_with_exploit_iter_%02d.pdf' % self.pnm_iteration)
@@ -633,40 +637,34 @@ class PNM():
                                                                 verbose=verbose)
 
 
-        #logger.info('Training pelican total steps: ' + str(self.pelican_training_steps))
-        #logger.info('Training panther total steps: ' + str(self.panther_training_steps))
-        # Store DF for printing
-        df_path = os.path.join(self.exp_path, "values.csv")
-        df.to_csv(df_path, index = False)
-
-        # DOESN'T WORK WITH VEC ENVS
-        # Make video
-        # video_path =  os.path.join(self.exp_path, 'test_pnm.mp4')
-        # basewidth,hsize = helper.make_video(self.pelican_model, self.pelican_env, video_path)
-
         # Saving final mixture and corresponding agents
+        logger.info("################################################")
+        logger.info("Saving final pelican mixtures and agents:")
         support_pelicans = np.nonzero(mixture_pelicans)[0]
         mixture_pelicans = mixture_pelicans[support_pelicans]
-        np.save(self.exp_path + '/mixture_pelicans.npy', mixture_pelicans)
+        np.save(self.exp_path + '/final_mixture_pelicans.npy', mixture_pelicans)
+        logger.info("Final pelican mixture saved to: %s" % self.exp_path + '/final_mixture_pelicans.npy')
         for i, idx in enumerate(mixture_pelicans):
-            self.pelican_model = helper.loadAgent(self.pelicans[i], self.model_type)
+            self.pelican_model = helper.loadAgent(glob.glob(self.pelicans[i]+ "/*.zip")[0], self.model_type)
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.pelicans_tmp_exp_path,
                                                                       self.pelican_model,
                                                                       self.model_type,
                                                                       self.pelican_env,
                                                                       self.basicdate + "_ps_" + str(i))
+            logger.info("Saving  pelican %d to %s" % (i, agent_filepath))
         support_panthers = np.nonzero(mixture_panthers)[0]
         mixture_panthers = mixture_panthers[support_panthers]
-        np.save(self.exp_path + '/mixture_panthers.npy', mixture_panthers)
+        np.save(self.exp_path + '/final_mixture_panthers.npy', mixture_panthers)
+        logger.info("Final panther mixture saved to: %s" % self.exp_path + '/final_mixture_panthers.npy')
         for i, idx in enumerate(mixture_panthers):
-            self.panther_model = helper.loadAgent(self.panthers[i], self.model_type)
+            self.panther_model = helper.loadAgent(glob.glob(self.panthers[i]+ "/*.zip")[0], self.model_type)
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.panthers_tmp_exp_path,
                                                                       self.panther_model,
                                                                       self.model_type,
                                                                       self.panther_env,
                                                                       self.basicdate + "_ps_" + str(i))
-        return video_path, basewidth, hsize
 
+            logger.info("Saving  panther %d to %s" % (i, agent_filepath))
 if __name__ == '__main__':
 
     #examples_dir = '/data/examples'
