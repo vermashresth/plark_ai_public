@@ -46,7 +46,7 @@ def evaluate(genome, config_file_path, driving_agent, normalise_obs, domain_para
         if done:
             break
 
-    #agent.save_agent(obs_normalise=normalise_obs)
+    #agent.save_agent(obs_normalise=normalise_obs, domain_params_in_obs=domain_params_in_obs)
 
     #print("Finished at step num:", step_num)
     #print("Reward:", reward)
@@ -63,8 +63,8 @@ if __name__ == '__main__':
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/nn_single_agent_balanced.json'
     #trained_agent = 'panther'
     trained_agent = 'pelican'
-    normalise_obs = False
-    domain_params_in_obs = False
+    normalise_obs = True
+    domain_params_in_obs = True
 
     #Instantiate dummy env and dummy agent
     #I need to do this to ascertain the number of weights needed in the optimisation

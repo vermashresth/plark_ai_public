@@ -19,8 +19,8 @@ class PantherNN(NNAgent):
     def action_lookup(self, action):
         return ACTION_LOOKUP[action]
 
-    def save_agent(self, obs_normalise):
-        self._save_agent_to_file('panther', obs_normalise)
+    def save_agent(self, obs_normalise, domain_params_in_obs):
+        self._save_agent_to_file('panther', obs_normalise, domain_params_in_obs)
 
     def check_file_name(self, model_dir):
 
