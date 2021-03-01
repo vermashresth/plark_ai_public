@@ -22,7 +22,7 @@ from schema import deserialize_state
 # Agent can be either a .zip file and metadata json file, or a .py file.
 
 AGENTS_PATH = os.path.join(
-    "/plark_ai_public", "data", "agents", "models", "latest"
+    "/plark_ai_public", "data", "agents", "test"
 )
 
 ##########################################################
@@ -62,7 +62,8 @@ def load_combatant(
 
     if ".py" in agent_path:
         return load_agent(
-            agent_path, agent_name, basic_agents_path, game, in_tournament=True,**kwargs
+
+            agent_path, agent_name, basic_agents_path, game, in_tournament=False,**kwargs
         )
     else:
 
@@ -105,6 +106,7 @@ def load_combatant(
                         algorithm,
                         observation,
                         image_based,
+                        in_tournament=True
                     )
                 elif metadata["agentplayer"] == "panther":
                     return Panther_Agent_Load_Agent(
@@ -112,6 +114,7 @@ def load_combatant(
                         algorithm,
                         observation,
                         image_based,
+                        in_tournament=True
                     )
 
     return None
@@ -237,9 +240,11 @@ if __name__ == "__main__":
             "First argument to combatant.py must be 'pelican' or 'panther'"
         )
 
-    subdirs = os.listdir(os.path.join(AGENTS_PATH, agent_type))
+    agent_path = os.path.join(AGENTS_PATH, agent_type)
+    subdirs = os.listdir(agent_path)
     for subdir in subdirs:
-        agent_path = os.path.join(AGENTS_PATH, agent_type, subdir)
+        if os.path.isdir(os.path.join(agent_path, subdir))
+        agent_path = os.path.join(agent_path, subdir)
         break
 
     agent_name = "comb_%s" % (agent_type)

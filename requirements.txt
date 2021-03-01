@@ -17,7 +17,5 @@ tensorboardx==2.0
 stable-baselines==2.10.1
 tensorflow==1.14
 
-torch==1.7.1
-stable-baselines3==0.10.0
-
 marshmallow==3.10.0
+
