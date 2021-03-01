@@ -6,7 +6,7 @@ import torch
 class PelicanNN(NNAgent):
 
     def __init__(self, num_inputs=None, num_hidden_layers=0, neurons_per_hidden_layer=0,
-                 file_dir_name=None):
+                 file_dir_name=None, game=None, stochastic_actions=False):
 
         #If a file directory name is given, check file name is for a Pelican
         if file_dir_name is not None:
@@ -14,7 +14,7 @@ class PelicanNN(NNAgent):
 
         super().__init__(num_inputs, len(ACTION_LOOKUP), 
                          num_hidden_layers, neurons_per_hidden_layer, 
-                         file_dir_name)
+                         file_dir_name, 'pelican', game, stochastic_actions)
 
     def action_lookup(self, action):
         return ACTION_LOOKUP[action]
