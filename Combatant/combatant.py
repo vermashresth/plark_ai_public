@@ -2,8 +2,13 @@ import os
 import sys
 import json
 import logging
+import time
 import pika
 import uuid
+
+from pika.adapters.utils.connection_workflow import (
+    AMQPConnectorSocketConnectError,
+)
 
 from plark_game.classes.newgame import load_agent
 from plark_game.classes.pantherAgent_load_agent import Panther_Agent_Load_Agent
@@ -210,10 +215,19 @@ def run_combatant(agent_type, agent_path, agent_name, basic_agents_path):
     else:
         hostname = "localhost"
 
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host=hostname)
-    )
-
+    connected = False
+    while not connected:
+        try:
+            connection = pika.BlockingConnection(
+                pika.ConnectionParameters(host=hostname)
+            )
+            connected = True
+        except (
+            pika.exceptions.AMQPConnectionError,
+            AMQPConnectorSocketConnectError,
+        ):
+            logger.info("Waiting for connection...")
+            time.sleep(2)
     channel = connection.channel()
 
     channel.queue_declare(queue=agent_queue)
