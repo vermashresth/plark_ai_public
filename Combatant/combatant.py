@@ -243,9 +243,9 @@ if __name__ == "__main__":
     agent_path = os.path.join(AGENTS_PATH, agent_type)
     subdirs = os.listdir(agent_path)
     for subdir in subdirs:
-        if os.path.isdir(os.path.join(agent_path, subdir))
-        agent_path = os.path.join(agent_path, subdir)
-        break
+        if os.path.isdir(os.path.join(agent_path, subdir)):
+            agent_path = os.path.join(agent_path, subdir)
+            break
 
     agent_name = "comb_%s" % (agent_type)
 
