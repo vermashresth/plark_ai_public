@@ -1,4 +1,4 @@
-from plark_game.classes import PelicanAgentFixedSBs
+from plark_game.classes.pelicanAgentFixedSBs import PelicanAgentFixedSBs
 
 class Pelican_Agent_3_Buoys(PelicanAgentFixedSBs):
 

@@ -1,4 +1,4 @@
-from plark_game.classes import Panther_Agent
+from plark_game.classes.pantherAgent import Panther_Agent
 
 class PantherAgentTestTurn(Panther_Agent):
 
@@ -10,5 +10,3 @@ class PantherAgentTestTurn(Panther_Agent):
 		action = 0 if self.moves_taken % 2 == 0 else 3
 		self.moves_taken += 1
 		return self.action_lookup(action)
-
-

@@ -1,4 +1,4 @@
-from plark_game.classes import Panther_Agent
+from plark_game.classes.pantherAgent import Panther_Agent
 
 class PantherAgentIllegalMove(Panther_Agent):
 
@@ -12,5 +12,3 @@ class PantherAgentIllegalMove(Panther_Agent):
 		# Always try to move down (illegal move)
 		self.moves_taken += 1
 		return self.action_lookup(3)
-
-

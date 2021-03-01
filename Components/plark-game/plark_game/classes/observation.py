@@ -49,10 +49,10 @@ class Observation():
         self.max_torp_search_range = 4
         self.max_sonobuoy_active_range = 4
 
-        self.pelican_col = 0 
+        self.pelican_col = 0
         self.pelican_row = 0
         self.panther_col = 0
-        self.panther_row = 0 
+        self.panther_row = 0
 
         #Obs shape is a list of the MAX values that all of the states will ever take
         #The size of this list is required by stable baslines in order to determine
@@ -75,7 +75,7 @@ class Observation():
             # Pelican location
             obs_shape.append(self.max_grid_width)
             obs_shape.append(self.max_grid_height)
-            
+
             # Madman status - this is a boolean
             obs_shape.append(2)
 
@@ -125,11 +125,11 @@ class Observation():
             # Pelican location
             obs_shape.append(self.max_grid_width)
             obs_shape.append(self.max_grid_height)
-            
+
             # Panther location
             obs_shape.append(self.max_grid_width)
             obs_shape.append(self.max_grid_height)
-            
+
             # Madman status - this is a boolean
             obs_shape.append(2)
 
@@ -177,15 +177,15 @@ class Observation():
         self.domain_params_obs_shape = []
 
         #Map width, map height, active range are already given so leave them out
-        self.domain_params_obs_shape.append(self.max_sonobuoys) 
-        self.domain_params_obs_shape.append(self.max_turns) 
-        self.domain_params_obs_shape.append(self.max_pelican_moves) 
-        self.domain_params_obs_shape.append(self.max_panther_moves) 
-        self.domain_params_obs_shape.append(self.max_torpedoes) 
-        self.domain_params_obs_shape.append(self.max_torpedo_turns) 
+        self.domain_params_obs_shape.append(self.max_sonobuoys)
+        self.domain_params_obs_shape.append(self.max_turns)
+        self.domain_params_obs_shape.append(self.max_pelican_moves)
+        self.domain_params_obs_shape.append(self.max_panther_moves)
+        self.domain_params_obs_shape.append(self.max_torpedoes)
+        self.domain_params_obs_shape.append(self.max_torpedo_turns)
         for i in range(self.max_torpedo_turns):
             self.domain_params_obs_shape.append(self.max_torpedo_speed)
-        self.domain_params_obs_shape.append(self.max_torp_search_range) 
+        self.domain_params_obs_shape.append(self.max_torp_search_range)
 
         #Add max domain params to obs_shape if flag is true
         if self.domain_params_in_obs:
@@ -196,7 +196,7 @@ class Observation():
         obs_shape_new = []
         for i in obs_shape:
             obs_shape_new.append(i+1)
-        obs_shape = obs_shape_new       
+        obs_shape = obs_shape_new
         self.domain_params_obs_shape = np.array(self.domain_params_obs_shape)+1
 
         self.observation_max_for_normalisation = obs_shape
@@ -210,12 +210,12 @@ class Observation():
             for row in range(board.rows):
                 if board.is_item_type_in_cell(item, col, row):
                     return (col, row)
-        return (None,None)                      
+        return (None,None)
 
     #Do not call! Private function
     def __determine_pelican_specific_observations(self, state, obs):
         # Remaining moves
-        remaining_pelican_moves = state['pelican_max_moves']  - state['pelican_move_in_turn'] 
+        remaining_pelican_moves = state['pelican_max_moves']  - state['pelican_move_in_turn']
         obs.append(remaining_pelican_moves)
         # Pelican location
         obs += [state['pelican_location']['col'], state['pelican_location']['row']]
@@ -223,7 +223,7 @@ class Observation():
         obs.append(int(state['madman_status']))
         # Sonobuoy range - fixed per game
         obs.append(state['sonobuoy_range'])
-        # Remaining Sonobuoys
+        # Remaining Sonobuoys
         obs.append(state['remaining_sonobuoys'])
         # sonobuoy locations & activations
         for i in range(self.max_sonobuoys):
@@ -234,7 +234,7 @@ class Observation():
             else:
                 obs += [self.max_grid_width+1, self.max_grid_height+1, 0]
 
-        # Remaining Torpedoes
+        # Remaining Torpedoes
         obs.append(state['remaining_torpedoes'])
         # Torpedo hunt enabled
         obs.append(int(state['torpedo_hunt_enabled']))
@@ -259,7 +259,7 @@ class Observation():
     #Do not call! Private function
     def __determine_panther_specific_observations(self, state, obs):
         # Remaining moves
-        remaining_panther_moves = state['panther_max_moves']  - state['panther_move_in_turn'] 
+        remaining_panther_moves = state['panther_max_moves']  - state['panther_move_in_turn']
         obs.append(remaining_panther_moves)
         # Pelican location
         obs += [state['pelican_location']['col'], state['pelican_location']['row']]
@@ -269,7 +269,7 @@ class Observation():
         obs.append(int(state['madman_status']))
         # Sonobuoy range - fixed per game
         obs.append(state['sonobuoy_range'])
-        # Remaining Sonobuoys
+        # Remaining Sonobuoys
         obs.append(state['remaining_sonobuoys'])
         # sonobuoy locations & activations
         for i in range(self.max_sonobuoys):
@@ -280,7 +280,7 @@ class Observation():
             else:
                 obs += [self.max_grid_width+1, self.max_grid_height+1, 0]
 
-        # Remaining Torpedoes
+        # Remaining Torpedoes
         obs.append(state['remaining_torpedoes'])
         # Torpedo hunt enabled
         obs.append(int(state['torpedo_hunt_enabled']))
@@ -311,10 +311,10 @@ class Observation():
         domain_params = []
         domain_params.append(self.game.pelican_parameters['default_sonobuoys'])
         domain_params.append(self.game.maxTurns)
-        domain_params.append(self.game.pelican_parameters['move_limit']) 
-        domain_params.append(self.game.panther_parameters['move_limit']) 
-        domain_params.append(self.game.pelican_parameters['default_torps']) 
-        domain_params.append(self.game.torpedo_parameters['turn_limit']) 
+        domain_params.append(self.game.pelican_parameters['move_limit'])
+        domain_params.append(self.game.panther_parameters['move_limit'])
+        domain_params.append(self.game.pelican_parameters['default_torps'])
+        domain_params.append(self.game.torpedo_parameters['turn_limit'])
         #Default value for torpedo speed is 0 if there are not maximum
         #torpedo turns
         torp_speeds = [0] * self.max_torpedo_turns
@@ -322,7 +322,7 @@ class Observation():
             if i < len(self.game.torpedo_parameters['speed']):
                 torp_speeds[i] = self.game.torpedo_parameters['speed'][i]
         domain_params += torp_speeds
-        domain_params.append(self.game.torpedo_parameters['search_range']) 
+        domain_params.append(self.game.torpedo_parameters['search_range'])
 
         domain_params = np.array(domain_params, dtype=float)
 
@@ -377,7 +377,7 @@ class Observation():
         #To normalise the observations we need to divide them all by the max values
         #that a state can be - we construct this in obs_maxs
         if norm_obs:
-            #These if conditions just deal with different circumstances for how to 
+            #These if conditions just deal with different circumstances for how to
             #build the normalisation constants
             obs_maxs = np.array(self.observation_max_for_normalisation)
             if domain_params and not self.domain_params_in_obs:
@@ -395,7 +395,7 @@ class Observation():
     #This function returns a numpy array with the full observation. It is modified
     #according to the member variables self.domain_params_in_obs and self.normalise
     def get_observation(self, state):
-        return self._determine_observation(state, norm_obs=self.normalise, 
+        return self._determine_observation(state, norm_obs=self.normalise,
                                            domain_params=self.domain_params_in_obs)
 
     #Get numpy array of unmodified observation with no normalisation or domain parameters
