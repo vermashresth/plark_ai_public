@@ -33,16 +33,16 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
                 else:
                     raise ValueError("Observation object not passed in to load agent.")
 
-            # load the agent
-            if os.path.exists(filepath):
-                self.loadAgent(filepath, algorithm_type)
-                logger.info("pelican agent loaded")
-            else:
-                raise ValueError(
-                    'Error loading pelican agent. File : "'
-                    + filepath
-                    + '" does not exsist'
-                )
+        # load the agent
+        if os.path.exists(filepath):
+            self.loadAgent(filepath, algorithm_type)
+            logger.info("pelican agent loaded")
+        else:
+            raise ValueError(
+                'Error loading pelican agent. File : "'
+                + filepath
+                + '" does not exsist'
+            )
 
     def loadAgent(self, filepath, algorithm_type):
         try:
