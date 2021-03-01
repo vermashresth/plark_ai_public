@@ -21,6 +21,7 @@ class PlarkEnv(gym.Env):
 
 
                 self.random_panther_start_position = kwargs.get('random_panther_start_position', False)
+                self.normalise = kwargs.get('normalise', False)
 
                 self.render_height = kwargs.get('render_height', None)
                 if self.render_height is None:
@@ -43,7 +44,7 @@ class PlarkEnv(gym.Env):
                 self.server_process = None
                 self.server_port = None
 
-                self.image_based = kwargs.get('image_based', True)
+                self.image_based = kwargs.get('image_based', False)
 
                 #logger.info('self.image_based :'+ str(self.image_based))
                 
