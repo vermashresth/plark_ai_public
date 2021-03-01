@@ -207,9 +207,21 @@ def load_agent(file_path, agent_name, basic_agents_filepath, game, in_tournament
 
                                 print("Filepath of the agent being loaded is: " + agent_filepath)
                                 if metadata['agentplayer'] == 'pelican':
-                                        return Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation, image_based)
+                                        return Pelican_Agent_Load_Agent(
+                                                agent_filepath,
+                                                metadata['algorithm'],
+                                                observation,
+                                                image_based,
+                                                in_tournament=in_tournament
+                                        )
                                 elif metadata['agentplayer'] == 'panther':
-                                        return Panther_Agent_Load_Agent(agent_filepath, metadata['algorithm'], observation ,image_based)
+                                        return Panther_Agent_Load_Agent(
+                                                agent_filepath,
+                                                metadata['algorithm'],
+                                                observation,
+                                                image_based,
+                                                in_tournament=in_tournament
+                                        )
 
                         else:
                                 raise ValueError('no agent found in ', file_path)
