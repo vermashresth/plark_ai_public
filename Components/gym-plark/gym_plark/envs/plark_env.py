@@ -21,7 +21,6 @@ class PlarkEnv(gym.Env):
 
 
                 self.random_panther_start_position = kwargs.get('random_panther_start_position', False)
-                self.normalise = kwargs.get('normalise', False)
 
                 self.render_height = kwargs.get('render_height', None)
                 if self.render_height is None:
@@ -102,6 +101,7 @@ class PlarkEnv(gym.Env):
                         self.observation_space = spaces.Box(low=0, high=255,
                                                                                         shape=(self.render_height, self.render_width, N_CHANNELS), dtype=np.uint8)
                         logger.info('Image observations created')                                                               
+                        self.normalise = None
                 else:
                         if len(self.env.activeGames) > 0:
                                 self.env.activeGames[len(self.env.activeGames)-1].reset_game()
