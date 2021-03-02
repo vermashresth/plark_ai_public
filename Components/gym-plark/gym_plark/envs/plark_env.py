@@ -102,6 +102,7 @@ class PlarkEnv(gym.Env):
                                                                                         shape=(self.render_height, self.render_width, N_CHANNELS), dtype=np.uint8)
                         logger.info('Image observations created')                                                               
                         self.normalise = None
+                        self.domain_params_in_obs = None
                 else:
                         if len(self.env.activeGames) > 0:
                                 self.env.activeGames[len(self.env.activeGames)-1].reset_game()
