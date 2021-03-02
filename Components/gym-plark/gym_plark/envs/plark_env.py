@@ -5,7 +5,8 @@ from gym.utils import seeding
 import numpy as np 
 
 import sys
-from plark_game import classes
+from plark_game.classes.environment import Environment
+from plark_game.classes.observation import Observation
 import random
 
 import logging
@@ -46,8 +47,7 @@ class PlarkEnv(gym.Env):
                 self.image_based = kwargs.get('image_based', False)
 
                 #logger.info('self.image_based :'+ str(self.image_based))
-                
-                self.env = classes.Environment()
+                self.env = Environment()
                 self.config_file_path = config_file_path
 
                 self.illegal_move_reward = -0.1
@@ -112,7 +112,7 @@ class PlarkEnv(gym.Env):
                                 else:
                                         self.env.createNewGame(**self.kwargs)
                         self.game = self.env.activeGames[len(self.env.activeGames)-1]           
-                        self.observation = classes.Observation(self.game, **kwargs)
+                        self.observation = Observation(self.game, **kwargs)
                         self.observation_space = self.observation.get_observation_space() 
 
                         self.normalise = self.observation.normalise
