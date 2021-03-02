@@ -24,17 +24,18 @@ import datetime
 from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
 from stable_baselines.common.vec_env import DummyVecEnv
-%matplotlib inline
-%load_ext autoreload
-%autoreload 2
 
-display(HTML(data="""
-<style>
-    div#notebook-container    { width: 95%; }
-    div#menubar-container     { width: 65%; }
-    div#maintoolbar-container { width: 99%; }
-</style>
-"""))
+#%matplotlib inline
+#%load_ext autoreload
+#%autoreload 2
+#
+#display(HTML(data="""
+#<style>
+#    div#notebook-container    { width: 95%; }
+#    div#menubar-container     { width: 65%; }
+#    div#maintoolbar-container { width: 99%; }
+#</style>
+#"""))
 
 def retrain(mean_reward, target_reward, count, env, model):
     model.set_env(env)
