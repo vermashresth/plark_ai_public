@@ -1,1 +1,1 @@
-{"algorithm": "PPO", "date": "20210222_171905_steps_9000", "agentplayer": "panther", "render_height": 250, "render_width": 310, "image_based": false}
+{"algorithm": "PPO", "date": "20210228_193734_pnm_iteration_36", "agentplayer": "panther", "render_height": 250, "render_width": 310, "image_based": false, "normalise": true, "domain_params_in_obs": true}
