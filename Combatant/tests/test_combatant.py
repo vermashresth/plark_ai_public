@@ -44,26 +44,18 @@ basic_agents_path = os.path.join(
 )
 
 agent_path = os.path.join(
-    "/plark_ai_public", "data", "agents", "models", "move_north_nn"
-)
+    os.path.abspath(os.path.join(
+        os.path.abspath(os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), os.pardir)), 
+        os.pardir)), 
+    "data", "agents", "test")
 
 if agent_type == "PELICAN":
-    # subdirs = os.listdir(os.path.join(agent_path, "pelican"))
-    # for subdir in subdirs:
-    #     agent_path = os.path.join(agent_path, "pelican", subdir)
-    #     break
-
+    agent_path = os.path.join(agent_path, "pelican")
     test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pelican")
-    
 elif agent_type == "PANTHER":
-
-    # subdirs = os.listdir(os.path.join(agent_path, "panther"))
-    # for subdir in subdirs:
-    #     agent_path = os.path.join(agent_path, "panther", subdir)
-    #     break
-    
+    agent_path = os.path.join(agent_path, "panther")
     test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "panther")
-
 else:
     raise RuntimeError("Unknown agent_type - must be 'PELICAN' or 'PANTHER'")
 
@@ -76,7 +68,6 @@ obs_norm = np.loadtxt(os.path.join(test_path, "10x10_obs_norm.txt"))
 d_params = np.loadtxt(os.path.join(test_path, "10x10_domain_params.txt"))
 d_params_norm = np.loadtxt(os.path.join(test_path, "10x10_domain_params_norm.txt"))
 
-
 agent = load_combatant(agent_path, AGENT_NAME, basic_agents_path)
 
 action = agent.getTournamentAction(
@@ -87,5 +78,5 @@ action = agent.getTournamentAction(
     state
 )
 
-if action not in ALLOWED_ACTIONS[agent_type]:
-    raise RuntimeError("NO!")
+# if action not in ALLOWED_ACTIONS[agent_type]:
+#     raise RuntimeError("NO!")
