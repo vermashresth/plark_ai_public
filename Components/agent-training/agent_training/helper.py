@@ -311,6 +311,7 @@ def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,i
     os.makedirs(model_dir, exist_ok=True)
     os.chmod(model_dir, 0o777)
     logger.info("Saving Metadata")
+    print(model.env)
     if isinstance(model.env, VecEnv) or isinstance(model.env, SubprocVecEnv_Torch):
         normalise = model.env.get_attr('normalise')[0]
         domain_params_in_obs = model.env.get_attr('domain_params_in_obs')[0]
@@ -493,7 +494,7 @@ def load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, pa
 
     return video_file, game.gameState ,video_file_path
 
-def make_video_VEC_ENV(model, env, video_file_path,n_steps = 10000,fps=DEFAULT_FPS,deterministic=False,basewidth=BASEWIDTH,verbose=False):
+def make_video_VEC_ENV(model, env, video_file_path,n_steps = 100,fps=DEFAULT_FPS,deterministic=False,basewidth=BASEWIDTH,verbose=False):
     # Test the trained agent
     # This is when you have a stable baselines model and an gym env
     obs = env.reset()
