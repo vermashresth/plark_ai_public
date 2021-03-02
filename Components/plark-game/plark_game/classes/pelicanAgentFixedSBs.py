@@ -1,4 +1,4 @@
-from plark_game.classes import Pelican_Agent
+from plark_game.classes.pelicanAgent import Pelican_Agent
 
 from random import seed
 from random import randint
