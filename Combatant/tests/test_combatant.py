@@ -44,11 +44,18 @@ basic_agents_path = os.path.join(
 )
 
 agent_path = os.path.join(
-    os.path.abspath(os.path.join(
-        os.path.abspath(os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), os.pardir)), 
-        os.pardir)), 
-    "data", "agents", "test")
+    os.path.abspath(
+        os.path.join(
+            os.path.abspath(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
+            ),
+            os.pardir,
+        )
+    ),
+    "data",
+    "agents",
+    "test",
+)
 
 if agent_type == "PELICAN":
     agent_path = os.path.join(agent_path, "pelican")
@@ -59,9 +66,7 @@ elif agent_type == "PANTHER":
 else:
     raise RuntimeError("Unknown agent_type - must be 'PELICAN' or 'PANTHER'")
 
-state = deserialize_state(
-    json.load(open(os.path.join(test_path, "10x10_state.json")))
-)
+state = deserialize_state(json.load(open(os.path.join(test_path, "10x10_state.json"))))
 
 obs = np.loadtxt(os.path.join(test_path, "10x10_obs.txt"))
 obs_norm = np.loadtxt(os.path.join(test_path, "10x10_obs_norm.txt"))
@@ -70,13 +75,9 @@ d_params_norm = np.loadtxt(os.path.join(test_path, "10x10_domain_params_norm.txt
 
 agent = load_combatant(agent_path, AGENT_NAME, basic_agents_path)
 
-action = agent.getTournamentAction(
-    obs,
-    obs_norm,
-    d_params,
-    d_params_norm,
-    state
-)
+action = agent.getTournamentAction(obs, obs_norm, d_params, d_params_norm, state)
 
-# if action not in ALLOWED_ACTIONS[agent_type]:
-#     raise RuntimeError("NO!")
+if action not in ALLOWED_ACTIONS[agent_type]:
+    raise RuntimeError("NO!")
+else:
+    print("Test successful")
