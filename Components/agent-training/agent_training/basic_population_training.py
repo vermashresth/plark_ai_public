@@ -20,7 +20,6 @@ from plark_game import classes
 from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 from gym_plark.envs.plark_env import PlarkEnv
 import datetime
-from tqdm import tqdm
 
 from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
@@ -71,7 +70,7 @@ panther_env = PlarkEnvSparse(driving_agent='panther',
 panthers = [helper.make_new_model(model_type, policy_panther, panther_env) for i in range(population_size)]
 pelicans = [helper.make_new_model(model_type, policy_pelican, pelican_env) for i in range(population_size)]
 
-for iteration in tqdm(range(iterations)):
+for iteration in range(iterations):
     print("Iteration: " + str(iteration))
     for panther in panthers:
         for pelican in pelicans:
