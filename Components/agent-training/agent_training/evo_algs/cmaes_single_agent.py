@@ -128,7 +128,7 @@ if __name__ == '__main__':
     stats.register("min", np.min)
     stats.register("max", np.max)
 
-    num_gens = 5
+    num_gens = 1000
     population, logbook = algorithms.eaGenerateUpdate(toolbox, ngen=num_gens, 
                                                       stats=stats, halloffame=hof)
 
