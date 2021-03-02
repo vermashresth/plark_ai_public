@@ -22,6 +22,11 @@ from copy import deepcopy
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv as SubprocVecEnv_Torch
 
+from plark_game import classes
+from plark_game.classes.environment import Environment
+from plark_game.classes.pantherAgent_load_agent import Panther_Agent_Load_Agent
+from plark_game.classes.pelicanAgent_load_agent import Pelican_Agent_Load_Agent
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -443,7 +448,7 @@ def og_load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name,
                     metadata = json.load(f)
                 logger.info('Playing against:'+agent_filepath)  
                 if metadata['agentplayer'] == 'pelican':        
-                    pelican_agent = classes.Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'])
+                    pelican_agent = Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'])
                     pelican_model = pelican_agent.model
 
                     env = plark_env.PlarkEnv(driving_agent='pelican',panther_agent_filepath=panther_agent_filepath, panther_agent_name=panther_agent_name, config_file_path=config_file_path)
@@ -473,7 +478,7 @@ def load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, pa
     'panther_agent_name': panther_agent_name,
     }
 
-    game_env = classes.Environment()
+    game_env = Environment()
     game_env.createNewGame(config_file_path, **kwargs)
     game = game_env.activeGames[len(game_env.activeGames)-1]
     
