@@ -50,7 +50,7 @@ if __name__ == '__main__':
 	parser.add_argument("--base-path", type=str, default="/data/agents/models", help="Directory to store trained models & logs in")
 	parser.add_argument("--tb-enabled", type=bool, default=True, help="Whether to log to tensorboard")
 	parser.add_argument("--algorithms", nargs="+", type=str, default=["PPO2"], help="Which algorithm to evaluate")
-	parser.add_argument("--use-non-image", type=bool, default=False, help="Whether to evaluate using non-image observations (direct game state)")
+	parser.add_argument("--use-non-image", type=bool, default=True, help="Whether to evaluate using non-image observations (direct game state)")
 
 	args = parser.parse_args()
 
