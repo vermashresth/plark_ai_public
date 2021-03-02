@@ -35,7 +35,6 @@ class Newgame(NewgameBase):
                 self.trained_agents_filepath = '/data/models/'
                 self.relative_basic_agents_filepath = '../agents/basic'
                 self.import_agents()
-                self.is_in_vec_env = kwargs.get('is_in_vec_env', False)
 
                 # Load agents
                 relative_basic_agents_filepath = os.path.join(os.path.dirname(__file__), self.relative_basic_agents_filepath)
