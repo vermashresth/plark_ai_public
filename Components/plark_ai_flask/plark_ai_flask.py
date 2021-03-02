@@ -16,7 +16,8 @@ import base64
 
 #from plark_game import classes
 from plark_game.classes.environment import Environment
-
+from plark_game.classes.pantherAgent import Panther_Agent
+from plark_game.classes.pelicanAgent import Pelican_Agent
 import importlib
 
 
