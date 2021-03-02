@@ -20,6 +20,7 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
         observation=None,
         imaged_based=True,
         in_tournament=False,
+        **kwargs
     ):
 
         if not in_tournament:
@@ -32,6 +33,9 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
                     self.observation = observation
                 else:
                     raise ValueError("Observation object not passed in to load agent.")
+
+        self.domain_params_in_obs =  ("domain_params_in_obs" in kwargs and kwargs["domain_params_in_obs"])
+        self.normalised =  ("normalise" in kwargs and kwargs["normalise"])
 
         # load the agent
         if os.path.exists(filepath):
@@ -94,5 +98,17 @@ class Pelican_Agent_Load_Agent(Pelican_Agent):
         Modify this if you have an agent that expects a different input, for
         example obs_normalised, or state, or if it needs the domain_parameters.
         """
-        action, _ = self.model.predict(obs, deterministic=False)
+        if self.normalised:
+            ob = obs_normalised
+            domain = domain_parameters_normalised
+        else:
+            ob = obs
+            domain = domain_parameters
+        if self.domain_params_in_obs:
+            if isinstance(ob, list):
+                ob += domain
+            elif isinstance(ob, np.ndarray):
+                ob = np.append(ob, domain)
+
+        action, _ = self.model.predict(ob, deterministic=False)
         return self.action_lookup(action)
