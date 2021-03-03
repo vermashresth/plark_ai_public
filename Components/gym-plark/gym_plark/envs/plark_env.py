@@ -23,6 +23,7 @@ class PlarkEnv(gym.Env):
 
 
                 self.random_panther_start_position = kwargs.get('random_panther_start_position', False)
+                self.random_pelican_start_position = kwargs.get('random_pelican_start_position', False)
 
                 self.render_height = kwargs.get('render_height', None)
                 if self.render_height is None:
@@ -244,7 +245,8 @@ class PlarkEnv(gym.Env):
         def reset(self):
                 #If a game already exists. reset
                 if len(self.env.activeGames) > 0:
-                        if self.random_panther_start_position: #On reset randomy places panther in a different location.
+                        #On reset randomly places panther in a different location.
+                        if self.random_panther_start_position: 
                                 map_width = self.env.activeGames[len(self.env.activeGames)-1].map_width
                                 map_height = self.env.activeGames[len(self.env.activeGames)-1].map_height
                                 #Taken out of domain_parameters.py (Simon's bounds)
@@ -253,17 +255,30 @@ class PlarkEnv(gym.Env):
                                 panther_start_row_lb = int(math.floor(0.8 * map_height))
                                 panther_start_row_ub = map_height-1
 
-                                pelican_start_col_lb = 0 
-                                pelican_start_col_ub = int(math.floor(0.33 * map_width))
-                                pelican_start_row_lb = 0
-                                pelican_start_row_ub = int(math.floor(0.2 * map_height))
-
                                 panther_start_col = random.choice(range(panther_start_col_lb,
                                                                         panther_start_col_ub+1))
                                 panther_start_row = random.choice(range(panther_start_row_lb,
                                                                         panther_start_row_ub+1)) 
                                 self.env.activeGames[len(self.env.activeGames)-1].panther_start_col = panther_start_col
                                 self.env.activeGames[len(self.env.activeGames)-1].panther_start_row = panther_start_row
+
+                        #On reset randomly places pelican in a different location.
+                        if self.random_pelican_start_position: 
+                                map_width = self.env.activeGames[len(self.env.activeGames)-1].map_width
+                                map_height = self.env.activeGames[len(self.env.activeGames)-1].map_height
+                                #Taken out of domain_parameters.py (Simon's bounds)
+                                pelican_start_col_lb = 0 
+                                pelican_start_col_ub = int(math.floor(0.33 * map_width))
+                                pelican_start_row_lb = 0
+                                pelican_start_row_ub = int(math.floor(0.2 * map_height))
+
+                                pelican_start_col = random.choice(range(pelican_start_col_lb,
+                                                                        pelican_start_col_ub+1))
+                                pelican_start_row = random.choice(range(pelican_start_row_lb,
+                                                                        pelican_start_row_ub+1))
+                                self.env.activeGames[len(self.env.activeGames)-1].pelican_start_col = pelican_start_col
+                                self.env.activeGames[len(self.env.activeGames)-1].pelican_start_row = pelican_start_row
+
                         self.env.activeGames[len(self.env.activeGames)-1].reset_game()
                 else:    
                         if self.config_file_path:
@@ -281,7 +296,6 @@ class PlarkEnv(gym.Env):
                 elif self.driving_agent == 'panther':
                         self.render_width = self.game.panther_parameters['render_width']
                         self.render_height = self.game.panther_parameters['render_height']
-
 
                 return self._observation()
 
