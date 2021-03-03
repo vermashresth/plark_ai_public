@@ -2,11 +2,11 @@
 .secrets
 
 
-data/**
-!data/agents
-data/agents/**
-!data/agents/models
-data/agents/models/**
+#data/**
+#!data/agents
+#data/agents/**
+#!data/agents/models
+#data/agents/models/**
 !data/agents/models/test_20200325_184254
 !data/agents/models/test_20200325_184254/PPO2_20200325_184254_panther/
 !data/agents/models/test_20200325_184254/PPO2_20200325_184254_pelican/
