@@ -13,7 +13,7 @@ pelican_push:
 	docker push $(REGISTRY)/${RL_TEAM_ID}:pelican_latest
 
 pelican_test:
-	docker run $(REGISTRY)/${RL_TEAM_ID}:pelican_latest Combatant/tests/test_combatant.sh
+	docker run $(REGISTRY)/${RL_TEAM_ID}:pelican_latest Combatant/tests/test_pelican.sh
 
 # PANTHER
 panther_build:
@@ -23,4 +23,4 @@ panther_push:
 	docker push $(REGISTRY)/${RL_TEAM_ID}:panther_latest
 
 panther_test:
-	docker run $(REGISTRY)/${RL_TEAM_ID}:panther_latest Combatant/tests/test_combatant.sh
+	docker run $(REGISTRY)/${RL_TEAM_ID}:panther_latest Combatant/tests/test_panther.sh
