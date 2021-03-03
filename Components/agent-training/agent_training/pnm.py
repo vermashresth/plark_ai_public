@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import os
 import glob
-from . import helper
-from . import lp_solve
+from agent_training import helper
+from agent_training import lp_solve
 import matplotlib.pyplot as plt
 import time
 import itertools
