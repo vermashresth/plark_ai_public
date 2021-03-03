@@ -41,7 +41,7 @@ def create_game_config_json(param_instance):
                 "start_row" : param_instance["start_row_pelican"].item(),
                 "madman_range" : 1,
                 "agent_filepath" : "pelicanAgent_3_buoys.py",
-                "agent_name" : "Pelican_Agent_3_Bouys",
+                "agent_name" : "Pelican_Agent_3_Buoys",
                 "default_torps" : param_instance["default_torpedos"].item(),
                 "default_sonobuoys" : param_instance["default_sonobuoys"].item(),
                 "render_height" : 250 ,
