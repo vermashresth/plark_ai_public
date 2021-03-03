@@ -8,6 +8,7 @@ import sys
 from plark_game.classes.environment import Environment
 from plark_game.classes.observation import Observation
 import random
+import math
 
 import logging
 logger = logging.getLogger(__name__)
@@ -246,8 +247,21 @@ class PlarkEnv(gym.Env):
                         if self.random_panther_start_position: #On reset randomy places panther in a different location.
                                 map_width = self.env.activeGames[len(self.env.activeGames)-1].map_width
                                 map_height = self.env.activeGames[len(self.env.activeGames)-1].map_height
-                                panther_start_col = random.choice(range(0,map_width-1))
-                                panther_start_row = random.choice(range(map_height-4,map_height-1)) 
+                                #Taken out of domain_parameters.py (Simon's bounds)
+                                panther_start_col_lb = int(math.floor(0.33 * map_width))
+                                panther_start_col_ub = int(math.floor(0.66 * map_width))
+                                panther_start_row_lb = int(math.floor(0.8 * map_height))
+                                panther_start_row_ub = map_height-1
+
+                                pelican_start_col_lb = 0 
+                                pelican_start_col_ub = int(math.floor(0.33 * map_width))
+                                pelican_start_row_lb = 0
+                                pelican_start_row_ub = int(math.floor(0.2 * map_height))
+
+                                panther_start_col = random.choice(range(panther_start_col_lb,
+                                                                        panther_start_col_ub+1))
+                                panther_start_row = random.choice(range(panther_start_row_lb,
+                                                                        panther_start_row_ub+1)) 
                                 self.env.activeGames[len(self.env.activeGames)-1].panther_start_col = panther_start_col
                                 self.env.activeGames[len(self.env.activeGames)-1].panther_start_row = panther_start_row
                         self.env.activeGames[len(self.env.activeGames)-1].reset_game()
@@ -267,6 +281,7 @@ class PlarkEnv(gym.Env):
                 elif self.driving_agent == 'panther':
                         self.render_width = self.game.panther_parameters['render_width']
                         self.render_height = self.game.panther_parameters['render_height']
+
 
                 return self._observation()
 
