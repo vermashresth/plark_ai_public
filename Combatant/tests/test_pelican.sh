@@ -1,3 +1,3 @@
 #! /bin/bash
 
-python3 Combatant/tests/test_combatant.py "PELICAN" $1
+python3 Combatant/tests/test_combatant.py "PELICAN"

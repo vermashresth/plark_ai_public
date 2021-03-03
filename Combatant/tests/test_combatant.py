@@ -7,6 +7,8 @@ from combatant import load_combatant
 from schema import deserialize_state
 import numpy as np
 
+from combatant import AGENTS_PATH
+
 ALLOWED_ACTIONS = {
     "PANTHER": [
         "1",  # Up
@@ -51,17 +53,18 @@ BASIC_AGENTS_PATH = os.path.join(
 def main():
 
     agent_type = sys.argv[1].upper()
-    agent_path = sys.argv[2]
 
     if agent_type not in ["PELICAN", "PANTHER"]:
         raise Exception("Agent type must PELICAN or PANTHER: %s" % (agent_type))
     
-    if not os.path.exists(agent_path):
-        raise Exception("Given agent path doesn't exist: %s" % (agent_path))
+    if not os.path.exists(AGENTS_PATH):
+        raise Exception("Given agent path doesn't exist: %s" % (AGENTS_PATH))
 
     if agent_type == "PELICAN":
+        agent_path = os.path.join(AGENTS_PATH, "pelican")
         test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pelican")
     else:
+        agent_path = os.path.join(AGENTS_PATH, "panther")
         test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "panther")
 
     state = deserialize_state(json.load(open(os.path.join(test_path, "10x10_state.json"))))
