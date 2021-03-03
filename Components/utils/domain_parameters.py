@@ -37,18 +37,18 @@ def start_col_panther_lb(map_width):
 def start_col_panther_ub(map_width):
     return int(math.floor(0.66 * map_width))
 def start_row_panther_lb(map_height):
-    return 0
+    return int(math.floor(0.8 * map_height))
 def start_row_panther_ub(map_height):
-    return int(math.floor(0.2 * map_height))
+    return map_height-1
 
 def start_col_pelican_lb(map_width):
     return 0 
 def start_col_pelican_ub(map_width):
     return int(math.floor(0.33 * map_width))
 def start_row_pelican_lb(map_height):
-    return int(math.floor(0.8 * map_height))
+    return 0
 def start_row_pelican_ub(map_height):
-    return map_height-1
+    return int(math.floor(0.2 * map_height))
 
 def compute_range(lb, ub):
     return list(range(lb, ub+1))
