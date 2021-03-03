@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import os
 import glob
-import helper
-import lp_solve
+from . import helper
+from . import lp_solve
 import matplotlib.pyplot as plt
 import time
 import itertools
