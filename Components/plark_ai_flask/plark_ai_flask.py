@@ -14,9 +14,12 @@ import uuid
 import json
 import base64
 
+#from plark_game import classes
+from plark_game.classes.environment import Environment
+from plark_game.classes.pantherAgent import Panther_Agent
+from plark_game.classes.pelicanAgent import Pelican_Agent
 import importlib
 
-from plark_game import classes
 
 
 from agent_training import helper 
@@ -38,7 +41,7 @@ config_filepath = '/Components/plark-game/plark_game/game_config'
 additional_basic_agents = '/data/agents/basic'
 additional_config_files = '/data/config'
 
-env = classes.Environment()
+env = Environment()
 
 
 web_ui_render_width = 1260

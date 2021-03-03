@@ -41,7 +41,7 @@ class PNM():
         basepath                        = kwargs.get('basepath', '/data/agents/models')
         
         # Training, evaluation steps, opponents, etc:
-        self.training_steps             = kwargs.get('training_steps', 500) # N training steps per PNM iteration for each agent
+        self.training_steps             = kwargs.get('training_steps', 100) # N training steps per PNM iteration for each agent
         self.payoff_matrix_trials       = kwargs.get('payoff_matrix_trials', 25) # N eval steps per pairing
         self.max_n_opponents_to_sample  = kwargs.get('max_n_opponents_to_sample', 30) # so 28 max for 7 parallel envs
         self.retraining_prob            = kwargs.get('retraining_prob', 0.8) # Probability with which a policy is bootstrapped.
@@ -644,8 +644,11 @@ class PNM():
         mixture_pelicans = mixture_pelicans[support_pelicans]
         np.save(self.exp_path + '/final_mixture_pelicans.npy', mixture_pelicans)
         logger.info("Final pelican mixture saved to: %s" % self.exp_path + '/final_mixture_pelicans.npy')
+        print("mixture:")
+        print(mixture_pelicans)
         for i, idx in enumerate(mixture_pelicans):
             self.pelican_model = helper.loadAgent(glob.glob(self.pelicans[i]+ "/*.zip")[0], self.model_type)
+            self.pelican_model.set_env(self.pelican_env) 
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.pelicans_tmp_exp_path,
                                                                       self.pelican_model,
                                                                       self.model_type,
@@ -658,6 +661,7 @@ class PNM():
         logger.info("Final panther mixture saved to: %s" % self.exp_path + '/final_mixture_panthers.npy')
         for i, idx in enumerate(mixture_panthers):
             self.panther_model = helper.loadAgent(glob.glob(self.panthers[i]+ "/*.zip")[0], self.model_type)
+            self.panther_model.set_env(self.panther_env) 
             agent_filepath ,_, _= helper.save_model_with_env_settings(self.panthers_tmp_exp_path,
                                                                       self.panther_model,
                                                                       self.model_type,
@@ -680,4 +684,3 @@ if __name__ == '__main__':
               initial_panthers = panthers_start_opponents)
 
     pnm.run_pnm()
-    main()

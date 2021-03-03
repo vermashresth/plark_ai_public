@@ -94,7 +94,12 @@ def run_self_play(exp_name,exp_path,basicdate,
     #Train initial pelican vs rule based panther
     
     if parallel:
-        pelican_env = SubprocVecEnv([lambda:PlarkEnv(driving_agent='pelican',config_file_path='/Components/plark-game/plark_game/game_config/10x10/pelican_easy.json',image_based=image_based,random_panther_start_position=True,max_illegal_moves_per_turn=3) for _ in range(num_parallel_envs)])
+        pelican_env = SubprocVecEnv([lambda:PlarkEnv(driving_agent='pelican',
+                                                     config_file_path='/Components/plark-game/plark_game/game_config/10x10/pelican_easy.json',
+                                                     image_based=image_based,
+                                                     random_panther_start_position=True,
+                                                     max_illegal_moves_per_turn=3,
+                                                     is_in_vec_env=True) for _ in range(num_parallel_envs)])
     else:
         pelican_env = PlarkEnv(driving_agent='pelican',config_file_path='/Components/plark-game/plark_game/game_config/10x10/pelican_easy.json',image_based=image_based,random_panther_start_position=True,max_illegal_moves_per_turn=3)
     
@@ -105,7 +110,13 @@ def run_self_play(exp_name,exp_path,basicdate,
 
     # Train initial panther agent vs initial pelican agent
     if parallel:
-        panther_env = SubprocVecEnv([lambda:PlarkEnv(driving_agent='panther',pelican_agent_filepath=pelican_agent_filepath,config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',image_based=image_based,random_panther_start_position=True,max_illegal_moves_per_turn=3) for _ in range(num_parallel_envs)])
+        panther_env = SubprocVecEnv([lambda:PlarkEnv(driving_agent='panther',
+                                                     pelican_agent_filepath=pelican_agent_filepath,
+                                                     config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',
+                                                     image_based=image_based,
+                                                     random_panther_start_position=True,
+                                                     max_illegal_moves_per_turn=3,
+                                                     is_in_vec_env=True) for _ in range(num_parallel_envs)])
     else:
         panther_env = PlarkEnv(driving_agent='panther',pelican_agent_filepath=pelican_agent_filepath,config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',image_based=image_based,random_panther_start_position=True,max_illegal_moves_per_turn=3)
     panther_model = helper.make_new_model(model_type,policy, panther_env)        
@@ -120,7 +131,13 @@ def run_self_play(exp_name,exp_path,basicdate,
         logger.info('Self play iteration '+str(i)+' of '+str(self_play_iterations))
         logger.info('Training pelican')
         if parallel:
-            pelican_env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent='pelican',panther_agent_filepath=panther_agent_filepath,config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',image_based=image_based,random_panther_start_position=True,max_illegal_moves_per_turn=3) for _ in range(num_parallel_envs)])
+            pelican_env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent='pelican',
+                                                               panther_agent_filepath=panther_agent_filepath,
+                                                               config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',
+                                                               image_based=image_based,
+                                                               random_panther_start_position=True,
+                                                               max_illegal_moves_per_turn=3,
+                                                               is_in_vec_env=True) for _ in range(num_parallel_envs)])
         else:
             pelican_env = PlarkEnvSparse(driving_agent='pelican',panther_agent_filepath=panther_agent_filepath,config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',image_based=image_based,random_panther_start_position=True,max_illegal_moves_per_turn=3)
         
@@ -129,7 +146,13 @@ def run_self_play(exp_name,exp_path,basicdate,
 
         logger.info('Training panther')
         if parallel:
-            panther_env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent='panther',pelican_agent_filepath=pelican_agent_filepath,config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',image_based=image_based,random_panther_start_position=True,max_illegal_moves_per_turn=3) for _ in range(num_parallel_envs)])
+            panther_env = SubprocVecEnv([lambda:PlarkEnvSparse(driving_agent='panther',
+                                                               pelican_agent_filepath=pelican_agent_filepath,
+                                                               config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',
+                                                               image_based=image_based,
+                                                               random_panther_start_position=True,
+                                                               max_illegal_moves_per_turn=3,
+                                                               is_in_vec_env=True) for _ in range(num_parallel_envs)])
         else:
             panther_env = PlarkEnvSparse(driving_agent='panther',pelican_agent_filepath=pelican_agent_filepath,config_file_path='/Components/plark-game/plark_game/game_config/10x10/balanced.json',image_based=image_based,random_panther_start_position=True,max_illegal_moves_per_turn=3)
         
@@ -139,8 +162,11 @@ def run_self_play(exp_name,exp_path,basicdate,
     logger.info('Training pelican total steps:'+str(pelican_training_steps))
     logger.info('Training panther total steps:'+str(panther_training_steps))
     # Make video 
-    video_path =  os.path.join(exp_path, 'test_self_play.mp4') 
-    basewidth,hsize = helper.make_video(pelican_model,pelican_env,video_path)
+    video_path =  os.path.join(exp_path, 'test_self_play.mp4')
+    if isinstance(pelican_env, SubprocVecEnv) or isinstance(pelican_env, SubprocVecEnv_Torch):
+        basewidth,hsize = helper.make_video_VEC_ENV(pelican_model,pelican_env,video_path)
+    else:
+        basewidth,hsize = helper.make_video(pelican_model,pelican_env,video_path)
     return video_path, basewidth, hsize
 
 if __name__ == '__main__':

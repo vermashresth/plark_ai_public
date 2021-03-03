@@ -20,7 +20,7 @@ from plark_game import classes
 from gym_plark.envs.plark_env_sparse import PlarkEnvSparse
 from gym_plark.envs.plark_env import PlarkEnv
 import datetime
-from tqdm import tqdm
+#from tqdm import tqdm
 
 from stable_baselines import DQN, PPO2, A2C, ACKTR
 from stable_baselines.bench import Monitor
@@ -85,7 +85,8 @@ panther_env.set_pelican(pelican)
 pelican_env.set_panther(panther)
 # -
 
-for iteration in tqdm(range(iterations)):
+#for iteration in tqdm(range(iterations)):
+for iteration in range(iterations):
     pelican.learn(steps)
     panther.learn(steps)
 

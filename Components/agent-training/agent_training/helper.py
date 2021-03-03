@@ -22,6 +22,11 @@ from copy import deepcopy
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv as SubprocVecEnv_Torch
 
+from plark_game import classes
+from plark_game.classes.environment import Environment
+from plark_game.classes.pantherAgent_load_agent import Panther_Agent_Load_Agent
+from plark_game.classes.pelicanAgent_load_agent import Pelican_Agent_Load_Agent
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -306,6 +311,7 @@ def save_model(basepath,model,modeltype,modelplayer,render_height,render_width,i
     os.makedirs(model_dir, exist_ok=True)
     os.chmod(model_dir, 0o777)
     logger.info("Saving Metadata")
+    print(model.env)
     if isinstance(model.env, VecEnv) or isinstance(model.env, SubprocVecEnv_Torch):
         normalise = model.env.get_attr('normalise')[0]
         domain_params_in_obs = model.env.get_attr('domain_params_in_obs')[0]
@@ -443,7 +449,7 @@ def og_load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name,
                     metadata = json.load(f)
                 logger.info('Playing against:'+agent_filepath)  
                 if metadata['agentplayer'] == 'pelican':        
-                    pelican_agent = classes.Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'])
+                    pelican_agent = Pelican_Agent_Load_Agent(agent_filepath, metadata['algorithm'])
                     pelican_model = pelican_agent.model
 
                     env = plark_env.PlarkEnv(driving_agent='pelican',panther_agent_filepath=panther_agent_filepath, panther_agent_name=panther_agent_name, config_file_path=config_file_path)
@@ -473,7 +479,7 @@ def load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, pa
     'panther_agent_name': panther_agent_name,
     }
 
-    game_env = classes.Environment()
+    game_env = Environment()
     game_env.createNewGame(config_file_path, **kwargs)
     game = game_env.activeGames[len(game_env.activeGames)-1]
     
@@ -488,7 +494,7 @@ def load_driving_agent_make_video(pelican_agent_filepath, pelican_agent_name, pa
 
     return video_file, game.gameState ,video_file_path
 
-def make_video_VEC_ENV(model, env, video_file_path,n_steps = 10000,fps=DEFAULT_FPS,deterministic=False,basewidth=BASEWIDTH,verbose=False):
+def make_video_VEC_ENV(model, env, video_file_path,n_steps = 100,fps=DEFAULT_FPS,deterministic=False,basewidth=BASEWIDTH,verbose=False):
     # Test the trained agent
     # This is when you have a stable baselines model and an gym env
     obs = env.reset()

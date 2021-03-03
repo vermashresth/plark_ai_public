@@ -1,4 +1,5 @@
 from plark_game.classes.agent import Agent
+from plark_game.classes.observation import Observation
 
 import numpy as np
 import torch
@@ -15,7 +16,11 @@ class NNAgent(Agent):
 
     def __init__(self, num_inputs, num_outputs,
                  num_hidden_layers=0, neurons_per_hidden_layer=0,
-                 file_dir_name=None):
+                 file_dir_name=None, agent_type=None, game=None,
+                 stochastic_actions=False):
+
+        self.agent_type = agent_type
+        self.stochastic_actions = stochastic_actions
 
         #For reading and writing models
         self.base_path = '/data/agents/evo_models/'
@@ -30,6 +35,16 @@ class NNAgent(Agent):
             self.num_inputs = metadata['num_inputs']
             self.num_hidden_layers = metadata['num_hidden_layers']
             self.neurons_per_hidden_layer = metadata['neurons_per_hidden_layer']
+            self.stochastic_actions = metadata['stochastic_actions']
+
+            assert game is not None, "Need to hand NewGame object to NNAgent constructor " \
+                "in order to build the Observation class"
+
+            obs_kwargs = {}
+            obs_kwargs['driving_agent'] = self.agent_type
+            obs_kwargs['normalise'] = metadata['normalise']
+            obs_kwargs['domain_params_in_obs'] = metadata['domain_params_in_obs']
+            self.observation = Observation(game, **obs_kwargs)
 
             #Build neural net
             self._build_nn()
@@ -47,6 +62,8 @@ class NNAgent(Agent):
             self.num_inputs = num_inputs
             self.num_hidden_layers = num_hidden_layers
             self.neurons_per_hidden_layer = neurons_per_hidden_layer
+
+            self.observation = None
 
             #Build neural net
             self._build_nn()
@@ -92,6 +109,12 @@ class NNAgent(Agent):
         return np.argmax(net_out)
 
     def getAction(self, state):
+
+        #If state dictionary comes through, convert to numpy array.
+        #This will happen when the NNAgent is the non-driving agent.
+        if self.observation is not None:
+            state = self.observation.get_observation(state)
+
         assert len(state) == self.num_inputs, "State length: {}, num inputs: {}" \
             .format(len(state), self.num_inputs)
 
@@ -99,8 +122,13 @@ class NNAgent(Agent):
         net_out = self._forward_pass(state)
 
         #Get action from nework output
-        action = self._get_most_probable_action(net_out)
-        #action = self._sample_action(net_out)
+        if self.stochastic_actions:
+            action = self._sample_action(net_out)
+        else:
+            action = self._get_most_probable_action(net_out)
+
+        if self.observation is not None:
+            action = self.action_lookup(action)
 
         return action
 
@@ -156,6 +184,7 @@ class NNAgent(Agent):
         metadata['playertype'] = player_type
         metadata['normalise'] = obs_normalise
         metadata['domain_params_in_obs'] = domain_params_in_obs
+        metadata['stochastic_actions'] = self.stochastic_actions
 
         metadata['num_inputs'] = self.num_inputs
         metadata['num_hidden_layers'] = self.num_hidden_layers
