@@ -32,18 +32,7 @@ ALLOWED_ACTIONS = {
 
 AGENT_NAME = ""
 
-agent_type = sys.argv[1]
-
-basic_agents_path = os.path.join(
-    "/plark_ai_public",
-    "Components",
-    "plark-game",
-    "plark_game",
-    "agents",
-    "basic",
-)
-
-agent_path = os.path.join(
+BASIC_AGENTS_PATH = os.path.join(
     os.path.abspath(
         os.path.join(
             os.path.abspath(
@@ -52,32 +41,46 @@ agent_path = os.path.join(
             os.pardir,
         )
     ),
-    "data",
+    "Components",
+    "plark-game",
+    "plark_game",
     "agents",
-    "test",
+    "basic"
 )
 
-if agent_type == "PELICAN":
-    agent_path = os.path.join(agent_path, "pelican")
-    test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pelican")
-elif agent_type == "PANTHER":
-    agent_path = os.path.join(agent_path, "panther")
-    test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "panther")
-else:
-    raise RuntimeError("Unknown agent_type - must be 'PELICAN' or 'PANTHER'")
+def main():
 
-state = deserialize_state(json.load(open(os.path.join(test_path, "10x10_state.json"))))
+    agent_type = sys.argv[1].upper()
+    agent_path = sys.argv[2]
 
-obs = np.loadtxt(os.path.join(test_path, "10x10_obs.txt"))
-obs_norm = np.loadtxt(os.path.join(test_path, "10x10_obs_norm.txt"))
-d_params = np.loadtxt(os.path.join(test_path, "10x10_domain_params.txt"))
-d_params_norm = np.loadtxt(os.path.join(test_path, "10x10_domain_params_norm.txt"))
+    if agent_type not in ["PELICAN", "PANTHER"]:
+        raise Exception("Agent type must PELICAN or PANTHER: %s" % (agent_type))
+    
+    if not os.path.exists(agent_path):
+        raise Exception("Given agent path doesn't exist: %s" % (agent_path))
 
-agent = load_combatant(agent_path, AGENT_NAME, basic_agents_path)
+    if agent_type == "PELICAN":
+        test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pelican")
+    else:
+        test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "panther")
 
-action = agent.getTournamentAction(obs, obs_norm, d_params, d_params_norm, state)
+    state = deserialize_state(json.load(open(os.path.join(test_path, "10x10_state.json"))))
 
-if action not in ALLOWED_ACTIONS[agent_type]:
-    raise RuntimeError("NO!")
-else:
-    print("Test successful")
+    obs = np.loadtxt(os.path.join(test_path, "10x10_obs.txt"))
+    obs_norm = np.loadtxt(os.path.join(test_path, "10x10_obs_norm.txt"))
+    d_params = np.loadtxt(os.path.join(test_path, "10x10_domain_params.txt"))
+    d_params_norm = np.loadtxt(os.path.join(test_path, "10x10_domain_params_norm.txt"))
+
+    agent = load_combatant(agent_path, AGENT_NAME, BASIC_AGENTS_PATH)
+
+    action = agent.getTournamentAction(obs, obs_norm, d_params, d_params_norm, state)
+
+    if action not in ALLOWED_ACTIONS[agent_type]:
+        raise RuntimeError("NO!")
+    else:
+        print("Test successful")
+
+
+if __name__ == "__main__":
+    
+    main()

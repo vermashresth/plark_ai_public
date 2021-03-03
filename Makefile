@@ -13,7 +13,8 @@ pelican_push:
 	docker push $(REGISTRY)/${RL_TEAM_ID}:pelican_latest
 
 pelican_test:
-	docker run $(REGISTRY)/${RL_TEAM_ID}:pelican_latest Combatant/tests/test_pelican.sh
+	PATH_TO_AGENT="data/agents/models/panther/move_north_nn"
+	docker run $(REGISTRY)/${RL_TEAM_ID}:pelican_latest Combatant/tests/test_pelican.sh "<<PATH TO THE AGENT>>"
 
 # PANTHER
 panther_build:
@@ -23,4 +24,4 @@ panther_push:
 	docker push $(REGISTRY)/${RL_TEAM_ID}:panther_latest
 
 panther_test:
-	docker run $(REGISTRY)/${RL_TEAM_ID}:panther_latest Combatant/tests/test_panther.sh
+	docker run $(REGISTRY)/${RL_TEAM_ID}:panther_latest Combatant/tests/test_panther.sh "<<PATH TO THE AGENT>>"
