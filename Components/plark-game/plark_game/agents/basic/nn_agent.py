@@ -17,10 +17,11 @@ class NNAgent(Agent):
     def __init__(self, num_inputs, num_outputs,
                  num_hidden_layers=0, neurons_per_hidden_layer=0,
                  file_dir_name=None, agent_type=None, game=None,
-                 stochastic_actions=False):
+                 stochastic_actions=False, driving_agent=True):
 
         self.agent_type = agent_type
         self.stochastic_actions = stochastic_actions
+        self.driving_agent = driving_agent
 
         #For reading and writing models
         self.base_path = '/data/agents/evo_models/'
@@ -112,7 +113,7 @@ class NNAgent(Agent):
 
         #If state dictionary comes through, convert to numpy array.
         #This will happen when the NNAgent is the non-driving agent.
-        if self.observation is not None:
+        if not self.driving_agent:
             state = self.observation.get_observation(state)
 
         assert len(state) == self.num_inputs, "State length: {}, num inputs: {}" \
@@ -127,7 +128,7 @@ class NNAgent(Agent):
         else:
             action = self._get_most_probable_action(net_out)
 
-        if self.observation is not None:
+        if not self.driving_agent:
             action = self.action_lookup(action)
 
         return action

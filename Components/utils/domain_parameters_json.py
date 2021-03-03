@@ -68,9 +68,9 @@ def create_game_config_json(param_instance):
     return game_config
 
 #Dump param instance dictionary of the form defined in domain_parameters.py
-def dump_param_instance_json(param_instance):
+def dump_param_instance_json(param_instance, file_path):
 
     game_config = create_game_config_json(param_instance)
 
-    with open('game_config_test.json', 'w') as outfile:
+    with open(file_path, 'w') as outfile:
         json.dump(game_config, outfile, indent=4)

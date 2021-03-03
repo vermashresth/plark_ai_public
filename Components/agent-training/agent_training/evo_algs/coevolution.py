@@ -7,10 +7,10 @@ if __name__ == '__main__':
 
     #Env variables
     config_file_path = '/Components/plark-game/plark_game/game_config/10x10/nn/nn_coevolution_balanced.json'
-    driving_agent = 'panther'
+    driving_agent = 'pelican'
     normalise_obs = True
     domain_params_in_obs = True
-    stochastic_actions = True
+    stochastic_actions = False
 
     #Instantiate dummy env and dummy agent
     #I need to do this to ascertain the number of weights needed in the optimisation
@@ -29,15 +29,17 @@ if __name__ == '__main__':
                                     num_hidden_layers=num_hidden_layers, 
                                     neurons_per_hidden_layer=neurons_per_hidden_layer)  
 
-    pelican_dummy_agent = PelicanNN(file_dir_name='pelican_20210301_193714', game=game)  
+    pelican_dummy_agent = PelicanNN(file_dir_name='pelican_20210302_195211', game=game,
+                                    driving_agent=True)  
 
-    #Set non-driving agent
-    game.pelicanAgent = pelican_dummy_agent
+    #Set agent
+    #game.pelicanAgent = pelican_dummy_agent
 
     dummy_env.reset()
 
     max_num_steps = 200
 
+    '''
     reward = 0
     obs = dummy_env._observation()
     for step_num in range(max_num_steps):
@@ -46,6 +48,7 @@ if __name__ == '__main__':
         reward += r
         if done:
             break
+    '''
 
     video_path = '/load_evo_non_driving_new.mp4'
-    helper.make_video_plark_env(panther_dummy_agent, dummy_env, video_path, n_steps=200)
+    helper.make_video_plark_env(pelican_dummy_agent, dummy_env, video_path, n_steps=200)

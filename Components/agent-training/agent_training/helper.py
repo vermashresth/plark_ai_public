@@ -588,7 +588,7 @@ def make_video_plark_env(agent, env, video_file_path, n_steps=10000, fps=DEFAULT
     for step in range(n_steps):
         image = env.render(view='ALL')
         action = agent.getAction(obs)
-        obs, _, done, _ = env.step(action)
+        obs, _, done, info = env.step(action)
        
         if hsize is None:
             wpercent = (basewidth/float(image.size[0]))
@@ -597,6 +597,7 @@ def make_video_plark_env(agent, env, video_file_path, n_steps=10000, fps=DEFAULT
         writer.append_data(np.copy(np.array(res_image)))
 
         if done:
+            print(info['status'])
             break
 
     writer.close()  

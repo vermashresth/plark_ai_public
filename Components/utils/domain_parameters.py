@@ -301,8 +301,8 @@ def calculate_num_param_permutations(endpoints = False):
 #rand_params = generate_random_param_instance(return_dict=True, endpoints=False)
 #print(rand_params)
 
-num_param_perms = calculate_num_param_permutations(endpoints=False)
-print("Number of parameter permutations:", num_param_perms)
+#num_param_perms = calculate_num_param_permutations(endpoints=True)
+#print("Number of parameter permutations:", num_param_perms)
 
-#all_permutations = compute_all_permutations(domain_parameter_ranges, 
-#                                            return_dict=False, endpoints=False)
+all_permutations = compute_all_permutations(domain_parameter_ranges, 
+                                            return_dict=False, endpoints=True)
