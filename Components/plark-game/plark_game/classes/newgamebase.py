@@ -423,7 +423,7 @@ class NewgameBase():
 
                 #Panther settings
                 self.panther_start_col = kwargs.get('panther_start_col', game_config.get('game_rules', {}).get('panther', {}).get('start_col', int(self.map_width/2)))
-                self.panther_start_row = kwargs.get('panther_start_row', game_config.get('game_rules', {}).get('panther', {}).get('start_row', int(self.map_height - 5)))
+                self.panther_start_row = kwargs.get('panther_start_row', game_config.get('game_rules', {}).get('panther', {}).get('start_row', int(self.map_height - 1)))
 
                 self.panther_parameters = {
                         "move_limit": kwargs.get('panther_move_limit', game_config['game_rules']['panther']['move_limit']),
