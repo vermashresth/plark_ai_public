@@ -137,7 +137,8 @@ class Newgame(NewgameBase):
                 metadata['algorithm'],
                 observation,
                 image_based,
-                in_tournament=in_tournament
+                in_tournament=in_tournament,
+                **kwargs
             )
 
 
@@ -158,7 +159,8 @@ class Newgame(NewgameBase):
                 metadata['algorithm'],
                 observation,
                 image_based,
-                in_tournament=in_tournament)
+                in_tournament=in_tournament,
+                **kwargs)
 
 
 def load_agent(file_path, agent_name, basic_agents_filepath, game, in_tournament=False, **kwargs):
@@ -195,23 +197,26 @@ def load_agent(file_path, agent_name, basic_agents_filepath, game, in_tournament
                                 image_based = True
                                 if 'image_based' in metadata and metadata['image_based'] == False: # If the image_based flag is not present asume image based, if it is there and set to false the set to false.
                                         image_based = False
-                                        if not in_tournament:
-                                            if kwargs is None:
-                                                kwargs = {}
 
-                                            kwargs['driving_agent'] = metadata['agentplayer']
-                                            kwargs['normalise'] = metadata['normalise']
-                                            kwargs['domain_params_in_obs'] = metadata['domain_params_in_obs']
+                                        if kwargs is None:
+                                            kwargs = {}
+                                        kwargs['driving_agent'] = metadata['agentplayer']
+                                        kwargs['normalise'] = metadata['normalise']
+                                        kwargs['domain_params_in_obs'] = metadata['domain_params_in_obs']
+                                        if not in_tournament:
                                             observation = Observation(game,**kwargs)
 
                                 print("Filepath of the agent being loaded is: " + agent_filepath)
+
+
                                 if metadata['agentplayer'] == 'pelican':
                                         return Pelican_Agent_Load_Agent(
                                                 agent_filepath,
                                                 metadata['algorithm'],
                                                 observation,
                                                 image_based,
-                                                in_tournament=in_tournament
+                                                in_tournament=in_tournament,
+                                                **kwargs
                                         )
                                 elif metadata['agentplayer'] == 'panther':
                                         return Panther_Agent_Load_Agent(
@@ -219,7 +224,8 @@ def load_agent(file_path, agent_name, basic_agents_filepath, game, in_tournament
                                                 metadata['algorithm'],
                                                 observation,
                                                 image_based,
-                                                in_tournament=in_tournament
+                                                in_tournament=in_tournament,
+                                                **kwargs
                                         )
 
                         else:

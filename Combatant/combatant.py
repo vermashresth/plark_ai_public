@@ -87,6 +87,7 @@ def load_combatant(
                 with open(metadata_filepath) as f:
                     metadata = json.load(f)
 
+                # NON-IMAGE-BASED
                 if (
                     "image_based" in metadata
                     and metadata["image_based"] is False
@@ -100,6 +101,7 @@ def load_combatant(
                         **kwargs
                     )
 
+                # IMAGE-BASED - NOT SUPPORTED FOR DSG TOURNAMENT
                 observation = None
                 image_based = True
                 algorithm = metadata["algorithm"]
