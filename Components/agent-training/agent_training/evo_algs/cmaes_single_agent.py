@@ -17,7 +17,8 @@ def save_video(genome, agent, env, num_steps, file_name='evo_run.mp4'):
     video_path = '/' + file_name
     helper.make_video_plark_env(agent, env, video_path, n_steps=num_steps)
 
-def evaluate(genome, config_file_path, driving_agent, normalise_obs, domain_params_in_obs):
+def evaluate(genome, config_file_path, driving_agent, normalise_obs, domain_params_in_obs,
+             num_trials):
 
     #Instantiate the env
     env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
@@ -36,16 +37,23 @@ def evaluate(genome, config_file_path, driving_agent, normalise_obs, domain_para
 
     agent.set_weights(genome)
 
-    env.reset()
-
     reward = 0
-    obs = env._observation()
-    while True:
-        action = agent.getAction(obs)    
-        obs, r, done, info = env.step(action)
-        reward += r
-        if done:
-            break
+
+    for i in range(num_trials):
+        env.reset()
+
+        obs = env._observation()
+        trial_reward = 0
+        while True:
+            action = agent.getAction(obs)    
+            obs, r, done, info = env.step(action)
+            trial_reward += r
+            if done:
+                break
+        reward += trial_reward
+
+    #Average trial reward
+    reward /= num_trials
 
     #agent.save_agent(obs_normalise=normalise_obs, domain_params_in_obs=domain_params_in_obs)
 
@@ -68,12 +76,19 @@ if __name__ == '__main__':
     domain_params_in_obs = True
     stochastic_actions = False
 
+    random_panther_start_position = True
+    random_pelican_start_position = True
+
+    num_trials = 5
+
     #Instantiate dummy env and dummy agent
     #I need to do this to ascertain the number of weights needed in the optimisation
     #procedure
-    dummy_env = PlarkEnvSparse(config_file_path=config_file_path, image_based=False, 
+    dummy_env = PlarkEnvSparse(config_file_path=config_file_path,
                                driving_agent=trained_agent, normalise=normalise_obs,
-                               domain_params_in_obs=domain_params_in_obs)
+                               domain_params_in_obs=domain_params_in_obs,
+                               random_panther_start_position=random_panther_start_position,
+                               random_pelican_start_position=random_pelican_start_position)
 
     #Neural net variables
     num_inputs = len(dummy_env._observation())
@@ -97,7 +112,7 @@ if __name__ == '__main__':
     toolbox = base.Toolbox()
     toolbox.register("evaluate", evaluate, config_file_path=config_file_path, 
                      driving_agent=trained_agent, normalise_obs=normalise_obs,
-                     domain_params_in_obs=domain_params_in_obs)
+                     domain_params_in_obs=domain_params_in_obs, num_trials=num_trials)
 
     #np.random.seed(108)
 
