@@ -1,5 +1,5 @@
-from domain_parameters import *
-from domain_parameters_json import *
+from plark_utils.domain_parameters import compute_all_permutations, domain_parameter_ranges
+from plark_utils.domain_parameters_json import dump_param_instance_json
 
 endpoint_permutations = compute_all_permutations(domain_parameter_ranges, 
                                                  return_dict=True, endpoints=True)
